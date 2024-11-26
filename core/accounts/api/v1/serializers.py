@@ -79,3 +79,31 @@ class LoginSerializer(serializers.Serializer):
         validated_data.pop("password")
 
         return validated_data
+
+
+class ResendActivationSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+    class Meta:
+        fields = ["email"]
+    
+    def validate(self, attrs):
+        email = attrs.get("email")
+        try:
+            user = User.objects.get(email = email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError(
+                {
+                    "details" : "user does not exist"
+                }
+            )
+        if user.is_verified:
+            raise serializers.ValidationError(
+                {
+                    "details" : "user has been already verified"
+                }
+            )
+        
+        attrs["user"] = user
+
+        return super().validate(attrs)

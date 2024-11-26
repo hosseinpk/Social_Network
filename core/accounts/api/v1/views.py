@@ -1,9 +1,9 @@
 from rest_framework.response import Response
-from rest_framework import generics
+from rest_framework import generics,views
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model
-from .serializers import RegistrationSerializer, LoginSerializer
+from .serializers import RegistrationSerializer, LoginSerializer,ResendActivationSerializer
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
@@ -61,3 +61,42 @@ class LoginApiView(generics.GenericAPIView):
             }
             return Response(data=data, status=status.HTTP_200_OK)
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class ActivationApiview(views.APIView):
+
+    def get(self,request,*args,**kwargs):
+        token = kwargs["token"]
+        try:
+            token = jwt.decode(token,settings.SECRET_KEY,algorithms=["HS256"])
+        except exceptions.ExpiredSignatureError:
+            return Response({"details" : "token has been expired"},status=status.HTTP_400_BAD_REQUEST)
+        except exceptions.InvalidTokenError:
+            return Response({"details" : "token is not valid"},status=status.HTTP_400_BAD_REQUEST)
+        user_id = token["user_id"]
+        user = get_object_or_404(User,pk=user_id)
+        if user.is_verified:
+            return Response({"details" : "user has already been verified"})
+        user.is_verified = True
+        user.save()
+        return Response({"details" : "user has been verified"})
+    
+
+class ResendActivationApiview(generics.GenericAPIView):
+    serializer_class = ResendActivationSerializer
+
+    def post(self,request,*args,**kwargs):
+        serializer = ResendActivationSerializer(data = request.data , context = {"request" : request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
+        token = RefreshToken.for_user(user)
+        token = str(token.access_token)
+        email_obj = EmailMessage(
+        "email/mail.tpl",
+        {"token":token},
+        "from@example.com",
+        to=[user],
+        )
+        email_obj.send()
+        return Response({
+            "details" : "activation email resend!!"
+        },status=status.HTTP_200_OK)
