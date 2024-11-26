@@ -1,11 +1,12 @@
 from .validators import numeric_validator, special_character_validator, letter_validator
 from django.core.validators import MinLengthValidator
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from accounts.models import Profile
 from django.core import exceptions
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.password_validation import validate_password
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 User = get_user_model()
@@ -54,8 +55,27 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.CharField(required = True,write_only = True)
-    password = serializers.CharField(required = True,write_only = True) 
+    email = serializers.CharField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True)
 
     class Meta:
-        fields = ["email","password"]
+        fields = ["email", "password"]
+
+    def validate(self, attrs):
+        validated_data = super().validate(attrs)
+        username = validated_data["email"]
+        password = validated_data["password"]
+        request = self.context.get("request")
+        user = authenticate(request=request, username=username, password=password)
+
+        if user is None:
+            raise serializers.ValidationError({"details": "wrong username or password"})
+        refresh = RefreshToken.for_user(user)
+        access = refresh.access_token
+
+        validated_data["is_staff"] = user.is_staff
+        validated_data["access"] = str(access)
+        validated_data["refresh"] = str(refresh)
+        validated_data.pop("password")
+
+        return validated_data
