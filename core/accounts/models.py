@@ -64,21 +64,36 @@ phone_number_validator = RegexValidator(
 )
 
 
-
 class Profile(models.Model):
     user = models.OneToOneField("User", on_delete=models.CASCADE)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     image = models.ImageField(upload_to="media/profile", blank=True, null=True)
     bio = models.CharField(max_length=50, blank=True, null=True)
-    personal_code = models.CharField(max_length=10,unique=True,blank=True,null=True,validators=[personal_code_validator,])
-    phone_number = models.CharField( max_length=13, unique=True,blank=True,null=True,validators=[phone_number_validator])
-    follower = models.ManyToManyField("self",symmetrical=False,related_name='following',blank=True)
+    personal_code = models.CharField(
+        max_length=10,
+        unique=True,
+        blank=True,
+        null=True,
+        validators=[
+            personal_code_validator,
+        ],
+    )
+    phone_number = models.CharField(
+        max_length=13,
+        unique=True,
+        blank=True,
+        null=True,
+        validators=[phone_number_validator],
+    )
+    follower = models.ManyToManyField(
+        "self", symmetrical=False, related_name="following", blank=True
+    )
     private = models.BooleanField(default=False)
-    #posts = models.ForeignKey()
+    # posts = models.ForeignKey()
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
-    
+
     def add_follower(self, profile):
         if profile == self:
             raise ValueError(" cannot follow yourself.")
@@ -86,7 +101,8 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.user.email
-    
+
+
 # @receiver(post_save, sender=User)
 # def save_profile(sender, instance, created, **kwargs):
 #     """

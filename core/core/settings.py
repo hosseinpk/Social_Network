@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     *LOCAL_APPS,
-    *THIRD_PARTY_APPS
+    *THIRD_PARTY_APPS,
 ]
 
 
@@ -156,11 +156,11 @@ REST_FRAMEWORK = {
     ],
 }
 
-EMAIL_BACKEND ="django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp4dev"
 EMAIL_USE_TLS = False
 EMAIL_PORT = 25
 EMAIL_HOST_USER = ""
 EMAIL_HOST_PASSWORD = ""
 
-CELERY_BROKER_URL = 'amqp://admin:Hp111271@gempel1375@rabbitmq//' 
+CELERY_BROKER_URL = "amqp://admin:Hp111271@gempel1375@rabbitmq//"

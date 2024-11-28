@@ -5,5 +5,5 @@ Account activation
 {% endblock %}
 
 {% block html %}
-http://127.0.0.1:8000/accounts/api/v1/forgotpassword/{{token}}
+<a href="http://127.0.0.1:8000/accounts/api/v1/forgetpassword/resetpassword/{{token}}"> Reset Password </a>
 {% endblock %}
