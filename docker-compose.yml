@@ -1,5 +1,18 @@
 services:
 
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - social
+    volumes:
+      - ./rabbitmq/rabbit_data/:/var/lib/rabbitmq/
+      - ./rabbitmq/rabbit_log/:/var/log/rabbitmq/
+    restart: on-failure  
+
   django:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
@@ -10,6 +23,25 @@ services:
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG}
+    
+    networks:
+      - social
+    depends_on:
+      - rabbitmq
+
+  worker:
+    build: .
+    command: celery -A core worker --loglevel=info
+    volumes:
+      - ./core:/app
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG}
+      
+    depends_on:
+      - rabbitmq
+      - django
+    restart: on-failure
     
     networks:
       - social

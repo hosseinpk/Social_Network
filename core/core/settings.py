@@ -162,3 +162,5 @@ EMAIL_USE_TLS = False
 EMAIL_PORT = 25
 EMAIL_HOST_USER = ""
 EMAIL_HOST_PASSWORD = ""
+
+CELERY_BROKER_URL = 'amqp://admin:Hp111271@gempel1375@rabbitmq//' 

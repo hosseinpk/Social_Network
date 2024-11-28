@@ -18,7 +18,7 @@ from django.dispatch import receiver
 class UserManager(BaseUserManager):
     def create_user(self, email, password, **extra_fields):
         if not email:
-            raise ValueError(_("the Email must"))
+            raise ValueError(_("the Email must be set"))
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -87,10 +87,10 @@ class Profile(models.Model):
     def __str__(self):
         return self.user.email
     
-    # @receiver(post_save, sender=User)
-    # def save_profile(sender, instance, created, **kwargs):
-    #     """
-    #     Signal for post creating a user which activates when a user being created ONLY
-    #     """
-    #     if created:
-    #         Profile.objects.create(user=instance)
+# @receiver(post_save, sender=User)
+# def save_profile(sender, instance, created, **kwargs):
+#     """
+#     Signal for post creating a user which activates when a user being created ONLY
+#     """
+#     if created:
+#         Profile.objects.create(user=instance)

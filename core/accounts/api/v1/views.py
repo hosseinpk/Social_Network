@@ -12,6 +12,7 @@ import jwt
 from jwt import exceptions
 from django.conf import settings
 from mail_templated import EmailMessage
+from .tasks import send_email
 
 User = get_user_model()
 
@@ -28,20 +29,14 @@ class RegistrationApiView(generics.GenericAPIView):
             email = serializer.validated_data["email"]
             user = get_object_or_404(User, email=email)
             refresh = RefreshToken.for_user(user)
-            access = refresh.access_token
+            token = refresh.access_token
             data = {
                 "email": email,
                 "is_staff": user.is_staff,
-                "access": str(access),
+                "access": str(token),
                 "refresh": str(refresh),
             }
-            mail =EmailMessage(
-                "email/mail.tpl",
-                {"token" : access},
-                "from@example.com",
-                to=[email]
-            )
-            mail.send()
+            send_email.delay(email,str(token))
             
             return Response(data=data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -87,16 +82,11 @@ class ResendActivationApiview(generics.GenericAPIView):
     def post(self,request,*args,**kwargs):
         serializer = ResendActivationSerializer(data = request.data , context = {"request" : request})
         serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
         user = serializer.validated_data["user"]
         token = RefreshToken.for_user(user)
         token = str(token.access_token)
-        email_obj = EmailMessage(
-        "email/mail.tpl",
-        {"token":token},
-        "from@example.com",
-        to=[user],
-        )
-        email_obj.send()
+        send_email.delay(email,token)
         return Response({
             "details" : "activation email resend!!"
         },status=status.HTTP_200_OK)
