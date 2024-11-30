@@ -26,6 +26,11 @@ def special_character_validator(password):
             _("password must include specific character"),
             code="password_must_include_specific_character",
         )
+    
+def email_validator(email):
+    regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
+    
+    return regex.search(email)
 
 
 def personal_code_validator(value: str):

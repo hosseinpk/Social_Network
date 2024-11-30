@@ -1,4 +1,4 @@
-from .validators import numeric_validator, special_character_validator, letter_validator
+from .validators import numeric_validator, special_character_validator, letter_validator , email_validator
 from django.core.validators import MinLengthValidator
 from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
@@ -16,6 +16,7 @@ User = get_user_model()
 
 class RegistrationSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(max_length=255)
+    username = serializers.CharField()
     password = serializers.CharField(
         validators=[
             numeric_validator,
@@ -28,7 +29,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["email", "password", "password1"]
+        fields = ["email","username", "password", "password1"]
 
     def validate(self, attrs):
 
@@ -57,25 +58,42 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.CharField(required=True, write_only=True)
+    email_or_username = serializers.CharField(required=True, write_only=True)
     password = serializers.CharField(required=True, write_only=True)
 
     class Meta:
-        fields = ["email", "password"]
+        fields = ["email_or_username", "password"]
+
 
     def validate(self, attrs):
         validated_data = super().validate(attrs)
-        username = validated_data["email"]
+        username = validated_data["email_or_username"]
         password = validated_data["password"]
         request = self.context.get("request")
-        user = authenticate(request=request, username=username, password=password)
+        
+        if email_validator(username) is None:
+            try:
+                username = User.objects.get(username = username)
+                user = authenticate(request=request,username=username,password=password)
 
+            except User.DoesNotExist:
+                raise serializers.ValidationError({"details": "user does not exist"})
+
+        else:
+            try:
+                username = User.objects.get(email = username)
+                user = authenticate(request=request,username=username,password=password)
+
+            except User.DoesNotExist:
+                raise serializers.ValidationError({"details": "user does not exist"})
+        if user is None:
+            raise serializers.ValidationError({"details": "wrong username or password"})
+        
         if not user.is_verified:
             raise serializers.ValidationError(
                 {"details": "you should verified your account before login!!!"}
             )
-        if user is None:
-            raise serializers.ValidationError({"details": "wrong username or password"})
+
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
 
@@ -228,6 +246,12 @@ class ResetForgetPasswordSerializer(serializers.ModelSerializer):
 
         
 
-
+class ProfileSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(read_only = True)
+    username = serializers.CharField(source="user.username")
+    
+    class Meta:
+        model = Profile
+        fields = ("user","username","first_name","last_name","image","bio","personal_code","phone_number","follower","following","private",)
 
 

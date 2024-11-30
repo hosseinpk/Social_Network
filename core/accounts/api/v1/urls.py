@@ -30,4 +30,5 @@ urlpatterns = [
         views.ResetForgetpasswordApiView.as_view(),
         name="forgetpassword",
     ),
+    path("profile/",views.ProfileApiView.as_view(),name="profile")
 ]

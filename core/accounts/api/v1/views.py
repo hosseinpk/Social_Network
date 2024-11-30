@@ -9,9 +9,11 @@ from .serializers import (
     ResendActivationSerializer,
     ResetPasswordSerializer,
     ForgetpassworSerializer,
-    ResetForgetPasswordSerializer
+    ResetForgetPasswordSerializer,
+    ProfileSerializer
     
 )
+from accounts.models import Profile
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _
@@ -154,3 +156,26 @@ class ResetForgetpasswordApiView(generics.GenericAPIView):
             }
             return Response(data = data,status=status.HTTP_200_OK)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    
+
+'''
+class LogoutApiView(generics.GenericAPIView):
+    pass
+'''
+
+class ProfileApiView(generics.GenericAPIView):
+    serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = Profile.objects.all()
+        return queryset
+
+    def get_object(self):
+        obj = get_object_or_404(self.get_queryset(),user=self.request.user)
+        return obj
+
+    def get(self,request,*args,**kwargs):
+        obj = self.get_object()
+        serializer = ProfileSerializer(instance = obj,context={"request": request})
+        return Response(serializer.data,status=status.HTTP_200_OK)

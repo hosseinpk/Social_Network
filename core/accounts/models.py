@@ -6,10 +6,9 @@ from django.contrib.auth.models import (
 )
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import EmailValidator, RegexValidator
-from django.core.exceptions import ValidationError
 from accounts.api.v1.validators import personal_code_validator
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+from django.utils.text import slugify
+
 
 
 # Create your models here.
@@ -44,6 +43,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField(max_length=100, unique=True, validators=[EmailValidator])
+    username = models.CharField(max_length=20,unique=True,blank=True,null=True)
     is_superuser = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -52,6 +52,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     updated_date = models.DateTimeField(auto_now=True)
 
     USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
     objects = UserManager()
 
     def __str__(self):
@@ -65,6 +66,7 @@ phone_number_validator = RegexValidator(
 
 
 class Profile(models.Model):
+
     user = models.OneToOneField("User", on_delete=models.CASCADE)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
@@ -91,8 +93,15 @@ class Profile(models.Model):
     )
     private = models.BooleanField(default=False)
     # posts = models.ForeignKey()
+    slug = models.SlugField(unique=True, blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
+
+    def save(self,  *args, **kwargs):
+
+        if not self.slug:
+            self.slug = slugify(self.user.username)
+        super().save(*args, **kwargs)
 
     def add_follower(self, profile):
         if profile == self:
@@ -101,7 +110,6 @@ class Profile(models.Model):
 
     def __str__(self):
         return self.user.email
-
 
 # @receiver(post_save, sender=User)
 # def save_profile(sender, instance, created, **kwargs):
