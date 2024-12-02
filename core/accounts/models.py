@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import EmailValidator, RegexValidator
 from accounts.api.v1.validators import personal_code_validator
 from django.utils.text import slugify
+from django.core.exceptions import ValidationError
 
 
 
@@ -57,6 +58,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
+    def save(self, *args , **kwargs):
+        if self.pk:
+            user = User.objects.get(pk = self.pk)
+            if user.email != self.email:
+                raise ValidationError("Email cannot be changed.")
+            if user.username != self.username:
+                raise ValidationError("Username cannot be changed.")
+        return super().save(*args , **kwargs)
 
 
 phone_number_validator = RegexValidator(
@@ -91,7 +101,7 @@ class Profile(models.Model):
     follower = models.ManyToManyField(
         "self", symmetrical=False, related_name="following", blank=True
     )
-    private = models.BooleanField(default=False)
+    private = models.BooleanField(default=True)
     # posts = models.ForeignKey()
     slug = models.SlugField(unique=True, blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
@@ -105,11 +115,36 @@ class Profile(models.Model):
 
     def add_follower(self, profile):
         if profile == self:
-            raise ValueError(" cannot follow yourself.")
+            raise ValueError("You cannot follow yourself.")
+        if not self.private:
+            raise PermissionError(_("Follow request required for private profiles."))
+        if profile in self.follower.all():
+            raise ValidationError(_("This user is already following you."))
         self.follower.add(profile)
+        return f"{profile} is now following {self}."
+
+    def remove_follower(self,profile):
+        self.follower.remove(profile)
 
     def __str__(self):
         return self.user.email
+    
+
+status_name = [("pending", "Pending"), ("accepted", "Accepted"), ("rejected", "Rejected")]
+
+class FollowRequest(models.Model):
+    
+    from_user = models.ForeignKey(User,related_name="sent_follow_requests",on_delete=models.CASCADE)
+    to_user = models.ForeignKey(User,related_name="received_follow_requests",on_delete=models.CASCADE)
+    status = models.CharField(max_length=10,choices=status_name,default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ["from_user","to_user"]
+
+    def __str__(self):
+        return f"{self.from_user} => {self.to_user} ({self.status})"
 
 # @receiver(post_save, sender=User)
 # def save_profile(sender, instance, created, **kwargs):

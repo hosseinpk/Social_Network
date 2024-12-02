@@ -10,7 +10,8 @@ from .serializers import (
     ResetPasswordSerializer,
     ForgetpassworSerializer,
     ResetForgetPasswordSerializer,
-    ProfileSerializer
+    ProfileSerializer,
+    AddFollowRequestSerializer
     
 )
 from accounts.models import Profile
@@ -179,3 +180,41 @@ class ProfileApiView(generics.GenericAPIView):
         obj = self.get_object()
         serializer = ProfileSerializer(instance = obj,context={"request": request})
         return Response(serializer.data,status=status.HTTP_200_OK)
+    
+    def put(self,request,*args,**kwargs):
+        obj = self.get_object()
+        serializer = ProfileSerializer(data = request.data, instance = obj ,context={"request": request} )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(data = serializer.data , status=status.HTTP_200_OK)
+        return Response( serializer.errors , status=status.HTTP_400_BAD_REQUEST)
+    
+    def patch(self,request,*args,**kwargs):
+        kwargs["partial"] = True
+        return self.put(request,*args,**kwargs)
+        
+    
+class FollowRequestApiView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = AddFollowRequestSerializer
+    def post(self,request,*args,**kwargs):
+        serializer = AddFollowRequestSerializer(data = request.data, context={"request": request})
+        if serializer.is_valid():
+            instance = serializer.save()
+            if hasattr(instance,"is_direct_follow") and instance.is_direct_follow:
+                data = {
+                        "status": "success",
+                        "detail": f"You are now following {instance.to_user.email}",
+                        "follow_status": "accepted"
+                    }
+                return Response(data=data,status=status.HTTP_201_CREATED)
+            
+            else:
+                data ={
+                    "status": "success",
+                    "detail": f"Follow request sent to {instance.to_user.email}",
+                    "follow_status": "pending"
+                }
+                return Response(data=data,status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)

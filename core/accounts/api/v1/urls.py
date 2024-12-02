@@ -18,7 +18,7 @@ urlpatterns = [
         name="resend-activation",
     ),
     path(
-        "resetpassword/<int:id>/",
+        "changepassword/<int:id>/",
         views.ResetPasswordApiview.as_view(),
         name="resetpassword",
     ),
@@ -30,5 +30,6 @@ urlpatterns = [
         views.ResetForgetpasswordApiView.as_view(),
         name="forgetpassword",
     ),
-    path("profile/",views.ProfileApiView.as_view(),name="profile")
+    path("profile/",views.ProfileApiView.as_view(),name="profile"),
+    path("profile/followrequest/<slug:slug>/",views.FollowRequestApiView.as_view(),name="followrequest")
 ]

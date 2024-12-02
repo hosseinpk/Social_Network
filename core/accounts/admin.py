@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from accounts.models import User, Profile
+from accounts.models import User, Profile, FollowRequest
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 
 
@@ -21,6 +21,7 @@ class CustomUserAdmin(UserAdmin):
         "is_superuser",
         "is_staff",
     )
+    readonly_fields = ("username", "email")
     search_fields = ("email",)
     ordering = ("email",)
     fieldsets = (
@@ -71,5 +72,5 @@ class CustomUserAdmin(UserAdmin):
 
 # Register your models here.
 admin.site.register(User, CustomUserAdmin)
-
+admin.site.register(FollowRequest)
 admin.site.register(Profile)

@@ -2,8 +2,8 @@ from .validators import numeric_validator, special_character_validator, letter_v
 from django.core.validators import MinLengthValidator
 from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
-from accounts.models import Profile
-from django.core import exceptions
+from accounts.models import Profile,FollowRequest
+from django.core import exceptions as e
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -248,10 +248,69 @@ class ResetForgetPasswordSerializer(serializers.ModelSerializer):
 
 class ProfileSerializer(serializers.ModelSerializer):
     user = serializers.CharField(read_only = True)
-    username = serializers.CharField(source="user.username")
+    username = serializers.CharField(source="user.username", read_only = True)
     
     class Meta:
         model = Profile
         fields = ("user","username","first_name","last_name","image","bio","personal_code","phone_number","follower","following","private",)
+        
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["follower"] = [
+            {"id":follower.id , "username": follower.user.username}
+            for follower in instance.follower.all()
+        ]
+
+        data["following"] = [
+            {"id":follower.id , "username": follower.user.username}
+            for follower in instance.following.all()
+        ]
+
+        return data
+    
+
+
+class AddFollowRequestSerializer(serializers.ModelSerializer):
+
+    
+    class Meta:
+        model =FollowRequest
+        fields = ["id", "from_user", "to_user", "status", "created_at"]
+        read_only_fields = ["id","from_user" ,"status", "created_at"]
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        from_user = request.user
+        to_user = validated_data["to_user"]
+        
+        try:
+            to_user = Profile.objects.get(user__email = to_user.email)
+            from_user = Profile.objects.get(user__email = from_user.email)
+        except Profile.DoesNotExist:
+            raise serializers.ValidationError({
+                "details" : "profile not found"
+            })
+
+        if not to_user.private:
+            try:
+                
+                follow_request = FollowRequest.objects.create(
+                        from_user=from_user.user,
+                        to_user=to_user.user,
+                        status="accepted"
+                )
+                from_user.add_follower(to_user)
+                follow_request.is_direct_follow = True
+                return follow_request
+            except e.ValidationError:
+                raise serializers.ValidationError({"details" : "this user already follow you"})
+        follow_request,created=FollowRequest.objects.get_or_create(from_user=from_user.user,to_user=to_user.user)
+        if not created:
+            raise serializers.ValidationError({"detils" : "request already sent!!"})
+        follow_request.is_direct_follow = False
+        return follow_request
+        
+        
 
 
