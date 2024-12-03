@@ -66,9 +66,8 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "core.urls"
 AUTHENTICATION_BACKENDS = [
-
-    "django.contrib.auth.backends.ModelBackend",  
-    "accounts.backends.EmailOrUsernameBackend",  
+    "django.contrib.auth.backends.ModelBackend",
+    "accounts.backends.EmailOrUsernameBackend",
 ]
 
 

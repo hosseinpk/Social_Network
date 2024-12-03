@@ -11,18 +11,18 @@ from .serializers import (
     ForgetpassworSerializer,
     ResetForgetPasswordSerializer,
     ProfileSerializer,
-    AddFollowRequestSerializer
-    
+    AddFollowRequestSerializer,
 )
-from accounts.models import Profile
+from .permissions import IsProfileOwner
+from accounts.models import Profile, FollowRequest
 from django.shortcuts import get_object_or_404
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.translation import gettext_lazy as _
 import jwt
 from jwt import exceptions
 from django.conf import settings
-from .tasks import send_email, forget_password
-
+from .tasks import send_email, forget_password, send_follow_request_email
+from .utils import decode_follow_request_token
 
 
 User = get_user_model()
@@ -146,75 +146,131 @@ class ForgetpasswordApiView(generics.GenericAPIView):
 
 class ResetForgetpasswordApiView(generics.GenericAPIView):
     serializer_class = ResetForgetPasswordSerializer
-    
-    def post(self,request,*args,**kwargs):
+
+    def post(self, request, *args, **kwargs):
         token = kwargs["token"]
-        serializer = ResetForgetPasswordSerializer(data = request.data,context = {"request":request,"token":token})
+        serializer = ResetForgetPasswordSerializer(
+            data=request.data, context={"request": request, "token": token}
+        )
         if serializer.is_valid():
             serializer.save()
-            data = {
-                "details" :"password change successfully"
-            }
-            return Response(data = data,status=status.HTTP_200_OK)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-    
+            data = {"details": "password change successfully"}
+            return Response(data=data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-'''
+
+"""
 class LogoutApiView(generics.GenericAPIView):
     pass
-'''
+"""
+
 
 class ProfileApiView(generics.GenericAPIView):
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
-    
+
+    def get_permissions(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return [IsAuthenticated(), IsProfileOwner()]
+        return super().get_permissions()
+
     def get_queryset(self):
         queryset = Profile.objects.all()
         return queryset
 
     def get_object(self):
-        obj = get_object_or_404(self.get_queryset(),user=self.request.user)
-        return obj
+        profile_id = self.kwargs.get("id")
+        if profile_id is not None:
+            obj = get_object_or_404(self.get_queryset(), id=profile_id)
+            return obj
+        else:
+            obj = get_object_or_404(self.get_queryset(), user=self.request.user)
+            return obj
 
-    def get(self,request,*args,**kwargs):
+    def get(self, request, *args, **kwargs):
+        id = kwargs.get("id")
         obj = self.get_object()
-        serializer = ProfileSerializer(instance = obj,context={"request": request})
-        return Response(serializer.data,status=status.HTTP_200_OK)
-    
-    def put(self,request,*args,**kwargs):
+        serializer = ProfileSerializer(
+            instance=obj, context={"request": request, "id": id}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, *args, **kwargs):
         obj = self.get_object()
-        serializer = ProfileSerializer(data = request.data, instance = obj ,context={"request": request} )
+        serializer = ProfileSerializer(
+            data=request.data, instance=obj, context={"request": request}
+        )
         if serializer.is_valid():
             serializer.save()
-            return Response(data = serializer.data , status=status.HTTP_200_OK)
-        return Response( serializer.errors , status=status.HTTP_400_BAD_REQUEST)
-    
-    def patch(self,request,*args,**kwargs):
+            return Response(data=serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, *args, **kwargs):
         kwargs["partial"] = True
-        return self.put(request,*args,**kwargs)
-        
-    
+        return self.put(request, *args, **kwargs)
+
+
 class FollowRequestApiView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AddFollowRequestSerializer
-    def post(self,request,*args,**kwargs):
-        serializer = AddFollowRequestSerializer(data = request.data, context={"request": request})
+
+    def post(self, request, *args, **kwargs):
+        serializer = AddFollowRequestSerializer(
+            data=request.data, context={"request": request}
+        )
         if serializer.is_valid():
             instance = serializer.save()
-            if hasattr(instance,"is_direct_follow") and instance.is_direct_follow:
+            if hasattr(instance, "is_direct_follow") and instance.is_direct_follow:
                 data = {
-                        "status": "success",
-                        "detail": f"You are now following {instance.to_user.email}",
-                        "follow_status": "accepted"
-                    }
-                return Response(data=data,status=status.HTTP_201_CREATED)
-            
+                    "status": "success",
+                    "detail": f"You are now following {instance.to_user.email}",
+                    "follow_status": "accepted",
+                }
+                return Response(data=data, status=status.HTTP_201_CREATED)
+
             else:
-                data ={
+                from_user_id = request.user.id
+                to_user_id = instance.to_user.id
+
+                send_follow_request_email.delay(from_user_id, to_user_id)
+                data = {
                     "status": "success",
                     "detail": f"Follow request sent to {instance.to_user.email}",
-                    "follow_status": "pending"
+                    "follow_status": "pending",
                 }
-                return Response(data=data,status=status.HTTP_201_CREATED)
-        
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+                return Response(data=data, status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcceptOrRejectFollowRequestApiView(generics.GenericAPIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        sign = kwargs["sign"]
+        id, action = decode_follow_request_token(sign)
+
+        follow_request = FollowRequest.objects.get(to_user=request.user.id)
+        to_user_profile = Profile.objects.get(user=request.user)
+        from_user_profile = Profile.objects.get(user=follow_request.from_user)
+        if action == "accept":
+            follow_request.status = "accepted"
+            to_user_profile.add_follower(from_user_profile)
+            follow_request.save()
+            return Response(
+                {"details": f"you are following {from_user_profile.user.username}"},
+                status=status.HTTP_200_OK,
+            )
+        elif action == "reject":
+            follow_request.status = "rejected"
+            follow_request.save()
+            return Response(
+                {
+                    "details": f"rejected follow request from {from_user_profile.user.username} "
+                }
+            )
+
+        return Response(
+            {"detail": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST
+        )

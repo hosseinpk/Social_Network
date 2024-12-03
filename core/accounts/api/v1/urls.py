@@ -30,6 +30,17 @@ urlpatterns = [
         views.ResetForgetpasswordApiView.as_view(),
         name="forgetpassword",
     ),
-    path("profile/",views.ProfileApiView.as_view(),name="profile"),
-    path("profile/followrequest/<slug:slug>/",views.FollowRequestApiView.as_view(),name="followrequest")
+    path("profile/", views.ProfileApiView.as_view(), name="profile"),
+    path("profile/<int:id>/", views.ProfileApiView.as_view(), name="profile"),
+    # <int:id> for get other profile
+    path(
+        "profile/<slug:slug>/followrequest/",
+        views.FollowRequestApiView.as_view(),
+        name="followrequest",
+    ),
+    path(
+        "profile/acceptrejectfollowrequest/<str:sign>/",
+        views.AcceptOrRejectFollowRequestApiView.as_view(),
+        name="accepreject",
+    ),
 ]

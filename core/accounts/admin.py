@@ -8,13 +8,20 @@ class CustomUserCreationForm(UserCreationForm):
 
     class Meta:
         model = User
-        fields = ("email","username")
+        fields = ("email", "username")
 
 
 class CustomUserAdmin(UserAdmin):
     model = User
     add_form = CustomUserCreationForm
-    list_display = ("email","username", "is_active", "is_superuser", "is_staff", "is_verified")
+    list_display = (
+        "email",
+        "username",
+        "is_active",
+        "is_superuser",
+        "is_staff",
+        "is_verified",
+    )
     list_filter = (
         "email",
         "is_active",
@@ -28,7 +35,7 @@ class CustomUserAdmin(UserAdmin):
         (
             "user",
             {
-                "fields": ("email" , "username", "password"),
+                "fields": ("email", "username", "password"),
             },
         ),
         (

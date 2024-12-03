@@ -11,7 +11,6 @@ from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 
 
-
 # Create your models here.
 
 
@@ -44,7 +43,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
 
     email = models.EmailField(max_length=100, unique=True, validators=[EmailValidator])
-    username = models.CharField(max_length=20,unique=True,blank=True,null=True)
+    username = models.CharField(max_length=20, unique=True, blank=True, null=True)
     is_superuser = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -58,15 +57,15 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-    
-    def save(self, *args , **kwargs):
+
+    def save(self, *args, **kwargs):
         if self.pk:
-            user = User.objects.get(pk = self.pk)
+            user = User.objects.get(pk=self.pk)
             if user.email != self.email:
                 raise ValidationError("Email cannot be changed.")
             if user.username != self.username:
                 raise ValidationError("Username cannot be changed.")
-        return super().save(*args , **kwargs)
+        return super().save(*args, **kwargs)
 
 
 phone_number_validator = RegexValidator(
@@ -107,7 +106,7 @@ class Profile(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
 
-    def save(self,  *args, **kwargs):
+    def save(self, *args, **kwargs):
 
         if not self.slug:
             self.slug = slugify(self.user.username)
@@ -123,28 +122,38 @@ class Profile(models.Model):
         self.follower.add(profile)
         return f"{profile} is now following {self}."
 
-    def remove_follower(self,profile):
+    def remove_follower(self, profile):
         self.follower.remove(profile)
 
     def __str__(self):
         return self.user.email
-    
 
-status_name = [("pending", "Pending"), ("accepted", "Accepted"), ("rejected", "Rejected")]
+
+status_name = [
+    ("pending", "Pending"),
+    ("accepted", "Accepted"),
+    ("rejected", "Rejected"),
+]
+
 
 class FollowRequest(models.Model):
-    
-    from_user = models.ForeignKey(User,related_name="sent_follow_requests",on_delete=models.CASCADE)
-    to_user = models.ForeignKey(User,related_name="received_follow_requests",on_delete=models.CASCADE)
-    status = models.CharField(max_length=10,choices=status_name,default="pending")
+
+    from_user = models.ForeignKey(
+        User, related_name="sent_follow_requests", on_delete=models.CASCADE
+    )
+    to_user = models.ForeignKey(
+        User, related_name="received_follow_requests", on_delete=models.CASCADE
+    )
+    status = models.CharField(max_length=10, choices=status_name, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ["from_user","to_user"]
+        unique_together = ["from_user", "to_user"]
 
     def __str__(self):
         return f"{self.from_user} => {self.to_user} ({self.status})"
+
 
 # @receiver(post_save, sender=User)
 # def save_profile(sender, instance, created, **kwargs):
