@@ -12,6 +12,7 @@ from .serializers import (
     ResetForgetPasswordSerializer,
     ProfileSerializer,
     AddFollowRequestSerializer,
+    GetFollowRequestSerializer,
 )
 from .permissions import IsProfileOwner
 from accounts.models import Profile, FollowRequest
@@ -274,3 +275,21 @@ class AcceptOrRejectFollowRequestApiView(generics.GenericAPIView):
         return Response(
             {"detail": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class GetFollowRequestApiView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated, IsProfileOwner]
+    serializer_class = GetFollowRequestSerializer
+
+    def get_queryset(self):
+        queryset = FollowRequest.objects.filter(
+            to_user=self.request.user, status="pending"
+        )
+        return queryset
+
+    def get(self, request, *args, **kwargs):
+
+        serializer = GetFollowRequestSerializer(
+            instance=self.get_queryset(), many=True, context={"request": request}
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)

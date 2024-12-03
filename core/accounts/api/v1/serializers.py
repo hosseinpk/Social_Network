@@ -339,3 +339,18 @@ class AddFollowRequestSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"detils": "request already sent!!"})
         follow_request.is_direct_follow = False
         return follow_request
+
+
+class GetFollowRequestSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FollowRequest
+        fields = "__all__"
+
+    def to_representation(self, instance):
+        request = self.context.get("request")
+        data = super().to_representation(instance)
+        data.pop("id")
+        data["from_user"] = instance.from_user.username
+        data["to_user"] = request.user.username
+        return data

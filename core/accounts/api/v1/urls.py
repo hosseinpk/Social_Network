@@ -43,4 +43,9 @@ urlpatterns = [
         views.AcceptOrRejectFollowRequestApiView.as_view(),
         name="accepreject",
     ),
+    path(
+        "profile/followrequest/",
+        views.GetFollowRequestApiView.as_view(),
+        name="getfollowrequest",
+    ),
 ]
