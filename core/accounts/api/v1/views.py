@@ -89,9 +89,7 @@ class LogoutApiView(generics.GenericAPIView):
 
 
 class ActivationApiview(views.APIView):
-    @extend_schema(
-            description="activation for new user"
-    )
+    @extend_schema(description="activation for new user")
     def get(self, request, *args, **kwargs):
         token = kwargs["token"]
         try:
@@ -181,7 +179,6 @@ class ResetForgetpasswordApiView(generics.GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 class ProfileApiView(generics.GenericAPIView):
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
@@ -232,7 +229,7 @@ class FollowRequestApiView(generics.GenericAPIView):
     serializer_class = AddFollowRequestSerializer
 
     @extend_schema(
-            description="send follow request for user,if user was public directly follow,if it was private send follow request"
+        description="send follow request for user,if user was public directly follow,if it was private send follow request"
     )
     def post(self, request, *args, **kwargs):
         serializer = AddFollowRequestSerializer(
@@ -268,9 +265,7 @@ class DeleteFollowRequestApiView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = DeleteFollowRequest
 
-    @extend_schema(
-            description="delete follow request that didnt accepted yet"
-    )
+    @extend_schema(description="delete follow request that didnt accepted yet")
     def delete(self, request, *args, **kwargs):
         username = kwargs.get("slug")
         serializer = DeleteFollowRequest(
@@ -278,8 +273,8 @@ class DeleteFollowRequestApiView(generics.GenericAPIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.delete()
-        data = {"detils" : "follow request successfully deleted"}
-        return Response(data= data, status=status.HTTP_200_OK)
+        data = {"detils": "follow request successfully deleted"}
+        return Response(data=data, status=status.HTTP_200_OK)
 
 
 class AcceptOrRejectFollowRequestApiView(generics.GenericAPIView):

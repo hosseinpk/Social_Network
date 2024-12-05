@@ -1,15 +1,42 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 from rest_framework_simplejwt.views import TokenVerifyView, TokenRefreshView
 
-
 app_name = "api_v1"
+
+profile_patterns = [
+    path("", views.ProfileApiView.as_view(), name="own_profile"),
+    path("<int:id>/", views.ProfileApiView.as_view(), name="profile_detail"),
+    path(
+        "<slug:slug>/followrequest/",
+        views.FollowRequestApiView.as_view(),
+        name="follow_request",
+    ),
+    path(
+        "<slug:slug>/deletefollowrequest/",
+        views.DeleteFollowRequestApiView.as_view(),
+        name="delete_follow_request",
+    ),
+    path(
+        "acceptrejectfollowrequest/<str:sign>/",
+        views.AcceptOrRejectFollowRequestApiView.as_view(),
+        name="accept_reject",
+    ),
+    path(
+        "followrequest/",
+        views.GetFollowRequestApiView.as_view(),
+        name="get_follow_request",
+    ),
+    path(
+        "<slug:slug>/unfollow/", views.RemoveFollowerApiView.as_view(), name="unfollow"
+    ),
+]
 
 urlpatterns = [
     path("registration/", views.RegistrationApiView.as_view(), name="registration"),
     path("login/", views.LoginApiView.as_view(), name="login"),
-    path("logout", views.LogoutApiView.as_view(), name="logout"),
-    path("verify/", TokenVerifyView.as_view(), name="verift"),
+    path("logout/", views.LogoutApiView.as_view(), name="logout"),
+    path("verify/", TokenVerifyView.as_view(), name="verify"),
     path("refresh/", TokenRefreshView.as_view(), name="refresh"),
     path(
         "verifyaccount/confirm/<str:token>/",
@@ -19,46 +46,20 @@ urlpatterns = [
     path(
         "verifyaccount/resend/",
         views.ResendActivationApiview.as_view(),
-        name="resend-activation",
+        name="resend_activation",
     ),
     path(
         "changepassword/<int:id>/",
         views.ResetPasswordApiview.as_view(),
-        name="resetpassword",
+        name="reset_password",
     ),
     path(
-        "forgetpassword/", views.ForgetpasswordApiView.as_view(), name="forgetpassword"
+        "forgetpassword/", views.ForgetpasswordApiView.as_view(), name="forget_password"
     ),
     path(
-        "forgetpassword/resetpassword/<str:token>",
+        "forgetpassword/resetpassword/<str:token>/",
         views.ResetForgetpasswordApiView.as_view(),
-        name="forgetpassword",
+        name="reset_forget_password",
     ),
-    path("profile/", views.ProfileApiView.as_view(), name="profile"),
-    path("profile/<int:id>/", views.ProfileApiView.as_view(), name="profile"),
-    path(
-        "profile/<slug:slug>/followrequest/",
-        views.FollowRequestApiView.as_view(),
-        name="followrequest",
-    ),
-    path(
-        "profile/<slug:slug>/deletefollowrequest/",
-        views.DeleteFollowRequestApiView.as_view(),
-        name="deletefollow-request",
-    ),
-    path(
-        "profile/acceptrejectfollowrequest/<str:sign>/",
-        views.AcceptOrRejectFollowRequestApiView.as_view(),
-        name="accepreject",
-    ),
-    path(
-        "profile/followrequest/",
-        views.GetFollowRequestApiView.as_view(),
-        name="getfollowrequest",
-    ),
-    path(
-        "profile/<slug:slug>/unfollow/",
-        views.RemoveFollowerApiView.as_view(),
-        name="unfollow",
-    ),
+    path("profile/", include(profile_patterns)),
 ]

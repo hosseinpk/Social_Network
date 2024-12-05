@@ -302,7 +302,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         id = self.context.get("id")
         data = super().to_representation(instance)
-        if id != None:
+        if id is not None:
             data.pop("user")
             data.pop("first_name")
             data.pop("last_name")
