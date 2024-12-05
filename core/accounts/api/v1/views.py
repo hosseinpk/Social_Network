@@ -13,6 +13,8 @@ from .serializers import (
     ProfileSerializer,
     AddFollowRequestSerializer,
     GetFollowRequestSerializer,
+    LogOutSerializer,
+    UnfollowSerializer,
 )
 from .permissions import IsProfileOwner
 from accounts.models import Profile, FollowRequest
@@ -67,6 +69,21 @@ class LoginApiView(generics.GenericAPIView):
             }
             return Response(data=data, status=status.HTTP_200_OK)
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class LogoutApiView(generics.GenericAPIView):
+
+    serializer_class = LogOutSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+
+        serializer = LogOutSerializer(data=request.data, context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            data = {"details": "successfully logout  "}
+            return Response(data=data, status=status.HTTP_204_NO_CONTENT)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ActivationApiview(views.APIView):
@@ -260,7 +277,7 @@ class AcceptOrRejectFollowRequestApiView(generics.GenericAPIView):
             to_user_profile.add_follower(from_user_profile)
             follow_request.save()
             return Response(
-                {"details": f"you are following {from_user_profile.user.username}"},
+                {"details": f"{from_user_profile.user.username} following you "},
                 status=status.HTTP_200_OK,
             )
         elif action == "reject":
@@ -293,3 +310,20 @@ class GetFollowRequestApiView(generics.GenericAPIView):
             instance=self.get_queryset(), many=True, context={"request": request}
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RemoveFollowerApiView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer = UnfollowSerializer
+
+    def delete(self, request, *args, **kwargs):
+        username = self.kwargs.get("slug")
+        serializer = UnfollowSerializer(data = request.data ,
+            context={"request": request, "username": username}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        data = {"details": "unfollow  successfully"}
+        return Response(data=data, status=status.HTTP_200_OK)
+
+        

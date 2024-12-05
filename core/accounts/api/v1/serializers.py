@@ -114,6 +114,31 @@ class LoginSerializer(serializers.Serializer):
         return validated_data
 
 
+class LogOutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+    class Meta:
+        fields = ["refresh"]
+
+    def validate(self, attrs):
+        refresh_token = attrs.get("refresh")
+        try:
+            RefreshToken(refresh_token)
+        except Exception as e:
+            raise serializers.ValidationError({"details": "invalid token"})
+        return attrs
+
+    def save(self, **kwargs):
+        refresh_token = self.validated_data["refresh"]
+        try:
+            refresh_token = RefreshToken(refresh_token)
+            refresh_token.blacklist()
+        except Exception as e:
+            raise serializers.ValidationError(
+                {"details": "Error occured while logging lout"}
+            )
+
+
 class ResendActivationSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
 
@@ -354,3 +379,39 @@ class GetFollowRequestSerializer(serializers.ModelSerializer):
         data["from_user"] = instance.from_user.username
         data["to_user"] = request.user.username
         return data
+
+
+class UnfollowSerializer(serializers.Serializer):
+    username = serializers.CharField(read_only=True)
+
+    def validate(self, attrs):
+
+        request = self.context.get("request")
+        username = self.context.get("username")
+        user = request.user
+        try:
+            profile_user = Profile.objects.get(user=user)
+        except Profile.DoesNotExist:
+            raise serializers.ValidationError(
+                {"details": "Your profile does not exist."}
+            )
+
+        try:
+            unfollow_user = Profile.objects.get(user__username=username)
+        except Profile.DoesNotExist:
+            raise serializers.ValidationError({"details": " not found user"})
+        if profile_user not in unfollow_user.follower.all():
+            raise serializers.ValidationError(
+                {"details": f"you are not following {unfollow_user.user.username}"}
+            )
+        attrs["unfollow_user"] = unfollow_user
+
+        return attrs
+
+    def save(self, **kwargs):
+        request = self.context.get("request")
+        user = request.user
+        profile_user = Profile.objects.get(user=user)
+        unfollow_user = self.validated_data["unfollow_user"]
+        unfollow_user.remove_follower(profile_user)
+        profile_user.save()

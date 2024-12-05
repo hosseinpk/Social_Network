@@ -123,7 +123,9 @@ class Profile(models.Model):
         return f"{profile} is now following {self}."
 
     def remove_follower(self, profile):
+                
         self.follower.remove(profile)
+        return f"{profile} unfollow by {self}."
 
     def __str__(self):
         return self.user.email
