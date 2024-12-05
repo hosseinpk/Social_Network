@@ -1,5 +1,29 @@
 services:
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - social
+    volumes:
+      - ./rabbitmq/rabbit_data/:/var/lib/rabbitmq/
+      - ./rabbitmq/rabbit_log/:/var/log/rabbitmq/
+    restart: on-failure  
+
+  redis:
+    image: redis:7.4.1-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis:/data
+    networks:
+      - social
+    restart: on-failure
+
   django:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
@@ -13,6 +37,44 @@ services:
     
     networks:
       - social
+    depends_on:
+      - rabbitmq
+      - redis
+  worker:
+    build: .
+    command: celery -A core worker --loglevel=info
+    volumes:
+      - ./core:/app
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG}
+      
+    depends_on:
+      - rabbitmq
+      - django
+    restart: on-failure
+    
+    networks:
+      - social
+
+  smtp4dev:
+    image: rnwood/smtp4dev:v3
+    restart: always
+    ports:
+      - '8080:80'
+      - '25:25'
+      - '143:143'
+    volumes:
+        - smtp4dev-data:/smtp4dev
+    environment:
+
+    - ServerOptions__Urls=http://*:80
+    - ServerOptions__HostName=smtp4dev
+    networks:
+      - social
+
+volumes:
+  smtp4dev-data:
 
 
 networks:

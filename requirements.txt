@@ -5,7 +5,7 @@ djangorestframework-simplejwt
 markdown
 django-filter
 django==4.2
-drf-yasg[validation]
+drf-spectacular
 setuptools
 django-cors-headers
 psycopg2-binary
@@ -14,3 +14,5 @@ celery
 redis
 gunicorn
 ipython
+django-mail-templated
+
