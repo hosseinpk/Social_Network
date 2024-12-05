@@ -15,6 +15,7 @@ from .serializers import (
     GetFollowRequestSerializer,
     LogOutSerializer,
     UnfollowSerializer,
+    DeleteFollowRequest,
 )
 from .permissions import IsProfileOwner
 from accounts.models import Profile, FollowRequest
@@ -26,6 +27,7 @@ from jwt import exceptions
 from django.conf import settings
 from .tasks import send_email, forget_password, send_follow_request_email
 from .utils import decode_follow_request_token
+from drf_spectacular.utils import extend_schema
 
 
 User = get_user_model()
@@ -87,7 +89,9 @@ class LogoutApiView(generics.GenericAPIView):
 
 
 class ActivationApiview(views.APIView):
-
+    @extend_schema(
+            description="activation for new user"
+    )
     def get(self, request, *args, **kwargs):
         token = kwargs["token"]
         try:
@@ -177,11 +181,6 @@ class ResetForgetpasswordApiView(generics.GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-"""
-class LogoutApiView(generics.GenericAPIView):
-    pass
-"""
-
 
 class ProfileApiView(generics.GenericAPIView):
     serializer_class = ProfileSerializer
@@ -232,6 +231,9 @@ class FollowRequestApiView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AddFollowRequestSerializer
 
+    @extend_schema(
+            description="send follow request for user,if user was public directly follow,if it was private send follow request"
+    )
     def post(self, request, *args, **kwargs):
         serializer = AddFollowRequestSerializer(
             data=request.data, context={"request": request}
@@ -259,6 +261,25 @@ class FollowRequestApiView(generics.GenericAPIView):
                 return Response(data=data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DeleteFollowRequestApiView(generics.GenericAPIView):
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = DeleteFollowRequest
+
+    @extend_schema(
+            description="delete follow request that didnt accepted yet"
+    )
+    def delete(self, request, *args, **kwargs):
+        username = kwargs.get("slug")
+        serializer = DeleteFollowRequest(
+            data=request.data, context={"request": request, "username": username}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.delete()
+        data = {"detils" : "follow request successfully deleted"}
+        return Response(data= data, status=status.HTTP_200_OK)
 
 
 class AcceptOrRejectFollowRequestApiView(generics.GenericAPIView):
@@ -318,12 +339,10 @@ class RemoveFollowerApiView(generics.GenericAPIView):
 
     def delete(self, request, *args, **kwargs):
         username = self.kwargs.get("slug")
-        serializer = UnfollowSerializer(data = request.data ,
-            context={"request": request, "username": username}
+        serializer = UnfollowSerializer(
+            data=request.data, context={"request": request, "username": username}
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         data = {"details": "unfollow  successfully"}
         return Response(data=data, status=status.HTTP_200_OK)
-
-        

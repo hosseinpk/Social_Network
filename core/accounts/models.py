@@ -123,7 +123,7 @@ class Profile(models.Model):
         return f"{profile} is now following {self}."
 
     def remove_follower(self, profile):
-                
+
         self.follower.remove(profile)
         return f"{profile} unfollow by {self}."
 
@@ -135,6 +135,7 @@ status_name = [
     ("pending", "Pending"),
     ("accepted", "Accepted"),
     ("rejected", "Rejected"),
+    ("deleted", "Deleted"),
 ]
 
 
@@ -147,6 +148,7 @@ class FollowRequest(models.Model):
         User, related_name="received_follow_requests", on_delete=models.CASCADE
     )
     status = models.CharField(max_length=10, choices=status_name, default="pending")
+    deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

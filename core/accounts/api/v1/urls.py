@@ -42,6 +42,11 @@ urlpatterns = [
         name="followrequest",
     ),
     path(
+        "profile/<slug:slug>/deletefollowrequest/",
+        views.DeleteFollowRequestApiView.as_view(),
+        name="deletefollow-request",
+    ),
+    path(
         "profile/acceptrejectfollowrequest/<str:sign>/",
         views.AcceptOrRejectFollowRequestApiView.as_view(),
         name="accepreject",

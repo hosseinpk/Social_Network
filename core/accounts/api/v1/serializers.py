@@ -355,15 +355,62 @@ class AddFollowRequestSerializer(serializers.ModelSerializer):
                 return follow_request
             except IntegrityError:
                 raise serializers.ValidationError(
-                    {"details": "follow request already sent"}
+                    {"details": "Follow request already sent"}
                 )
         follow_request, created = FollowRequest.objects.get_or_create(
             from_user=from_user.user, to_user=to_user.user
         )
         if not created:
-            raise serializers.ValidationError({"detils": "request already sent!!"})
+            if follow_request.status == "pending":
+                raise serializers.ValidationError(
+                    {"details": "Follow request already sent."}
+                )
+            elif follow_request.status == "accepted":
+                raise serializers.ValidationError(
+                    {"details": "You are already following this user."}
+                )
+            elif follow_request.status == "rejected":
+                follow_request.status = "pending"
+                follow_request.save()
+                return follow_request
+            elif follow_request.deleted:
+                follow_request.deleted = False
+                follow_request.status = "pending"
+                follow_request.save()
+                return follow_request
         follow_request.is_direct_follow = False
         return follow_request
+
+
+class DeleteFollowRequest(serializers.Serializer):
+
+    def validate(self, attrs):
+
+        username = self.context.get("username")
+        request = self.context.get("request")
+        from_user = request.user
+        try:
+            to_user = User.objects.get(username=username)
+        except Profile.DoesNotExist:
+            raise serializers.ValidationError({"details": "Profile not found."})
+
+        try:
+            follow_request = FollowRequest.objects.get(
+                from_user=from_user, to_user=to_user, status="pending"
+            )
+        except FollowRequest.DoesNotExist:
+            serializers.ValidationError({"details": "No follow request exists."})
+
+        attrs["follow_request"] = follow_request
+
+        return attrs
+
+    def delete(self):
+        follow_request = self.validated_data["follow_request"]
+        follow_request.status = "deleted"
+        follow_request.deleted = True
+        follow_request.save()
+        return {"detail": f"You have successfully delete your follow request."}
 
 
 class GetFollowRequestSerializer(serializers.ModelSerializer):
@@ -415,3 +462,16 @@ class UnfollowSerializer(serializers.Serializer):
         unfollow_user = self.validated_data["unfollow_user"]
         unfollow_user.remove_follower(profile_user)
         profile_user.save()
+        try:
+            follow_request = FollowRequest.objects.get(
+                from_user=profile_user.user, to_user=unfollow_user.user
+            )
+            follow_request.deleted = True
+            follow_request.status = "deleted"
+            follow_request.save()
+        except FollowRequest.DoesNotExist:
+            pass
+
+        return {
+            "detail": f"You have successfully unfollowed {unfollow_user.user.username}."
+        }
