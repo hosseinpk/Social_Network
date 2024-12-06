@@ -101,7 +101,6 @@ class Profile(models.Model):
         "self", symmetrical=False, related_name="following", blank=True
     )
     private = models.BooleanField(default=True)
-    # posts = models.ForeignKey()
     slug = models.SlugField(unique=True, blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
@@ -126,6 +125,14 @@ class Profile(models.Model):
 
         self.follower.remove(profile)
         return f"{profile} unfollow by {self}."
+    
+    def follower_count(self):
+
+        return len(self.follower.all())
+
+    def following_count(self):
+
+        return len(self.following.all())
 
     def __str__(self):
         return self.user.email

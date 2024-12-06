@@ -77,7 +77,12 @@ class CustomUserAdmin(UserAdmin):
     )
 
 
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "first_name", "last_name", "phone_number", "private", "created_date")
+    search_fields = ("user__username", "first_name", "last_name", "phone_number")
+    list_filter = ("private", "created_date", "updated_date")
+
 # Register your models here.
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(FollowRequest)
-admin.site.register(Profile)
+admin.site.register(Profile,ProfileAdmin)
