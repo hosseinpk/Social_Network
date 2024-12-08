@@ -1,5 +1,5 @@
-from django.urls import path,include
+from django.urls import path, include
 
-app_name="posts"
+app_name = "posts"
 
-urlpatterns = [path("api/v1/",include("posts.api.v1.urls"))]
+urlpatterns = [path("api/v1/", include("posts.api.v1.urls"))]

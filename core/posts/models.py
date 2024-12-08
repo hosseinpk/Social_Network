@@ -1,19 +1,20 @@
 from django.db import models
 from accounts.models import Profile
 
+
 class Post(models.Model):
 
     STATUS_CHOICES = [
-        ("draft", "Draft"),        
-        ("published", "Published"),  
-        ("deleted", "Deleted"),    
+        ("draft", "Draft"),
+        ("published", "Published"),
+        ("deleted", "Deleted"),
     ]
 
     content = models.CharField(max_length=255)
-    image = models.ImageField(upload_to="posts/images/")  
+    image = models.ImageField(upload_to="posts/images/", blank=True)
     author = models.ForeignKey(Profile, on_delete=models.CASCADE)
     allowed_comment = models.BooleanField(default=True)
-    status = models.CharField(max_length=10,choices=STATUS_CHOICES,default="draft")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="draft")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

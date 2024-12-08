@@ -201,6 +201,10 @@ class ProfileApiView(generics.GenericAPIView):
             obj = get_object_or_404(self.get_queryset(), user=self.request.user)
             return obj
 
+    @extend_schema(
+        operation_id="get_profile",
+        description="Retrieve the profile of the authenticated user or a specific profile by ID.",
+    )
     def get(self, request, *args, **kwargs):
         id = kwargs.get("id")
         obj = self.get_object()
@@ -209,6 +213,10 @@ class ProfileApiView(generics.GenericAPIView):
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        operation_id="update_profile",
+        description="Fully update the profile of the authenticated user or a specific profile by ID.",
+    )
     def put(self, request, *args, **kwargs):
         obj = self.get_object()
         serializer = ProfileSerializer(
@@ -219,9 +227,20 @@ class ProfileApiView(generics.GenericAPIView):
             return Response(data=serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        operation_id="partial_update_profile",
+        description="Partially update the profile of the authenticated user or a specific profile by ID.",
+    )
     def patch(self, request, *args, **kwargs):
-        kwargs["partial"] = True
-        return self.put(request, *args, **kwargs)
+
+        obj = self.get_object()
+        serializer = ProfileSerializer(
+            instance=obj, data=request.data, partial=True, context={"request": request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class FollowRequestApiView(generics.GenericAPIView):

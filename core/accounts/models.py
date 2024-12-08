@@ -125,7 +125,7 @@ class Profile(models.Model):
 
         self.follower.remove(profile)
         return f"{profile} unfollow by {self}."
-    
+
     def follower_count(self):
 
         return len(self.follower.all())
