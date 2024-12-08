@@ -1,20 +1,28 @@
 from rest_framework import serializers
 from posts.models import Post
 from accounts.models import Profile
-from rest_framework.reverse import reverse
 
 
 class PostSerializer(serializers.ModelSerializer):
 
-    
-
     class Meta:
         model = Post
-        fields = ["id", "content", "image", "allowed_comment", "status",]
+        fields = [
+            "id",
+            "content",
+            "image",
+            "allowed_comment",
+            "status",
+            "author"
+        ]
         read_only_fields = ["author"]
 
+    def to_representation(self, instance):
 
+        rep = super().to_representation(instance)
+        rep["author"] = instance.author.user.username
 
+        return rep
 
     def create(self, validated_data):
         request = self.context.get("request")

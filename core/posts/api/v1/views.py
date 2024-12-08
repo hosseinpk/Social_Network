@@ -8,15 +8,16 @@ from django.shortcuts import get_object_or_404
 from .permissions import IsPostOwnser
 
 
-class CreatePostApiView(generics.GenericAPIView):
+class PostApiView(generics.GenericAPIView):
 
     permission_classes = [IsAuthenticated]
     serializer_class = PostSerializer
 
     def get_queryset(self):
 
-        profile = get_object_or_404(Profile, user=self.request.user)
-        queryset = Post.objects.filter(author=profile)
+        #profile = get_object_or_404(Profile, user=self.request.user)
+        #queryset = Post.objects.filter(author=profile)
+        queryset = Post.objects.all()
         return queryset
 
     def post(self, request, *args, **kwargs):

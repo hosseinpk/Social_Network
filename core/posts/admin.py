@@ -11,7 +11,7 @@ class PostAdmin(admin.ModelAdmin):
         "allowed_comment",
         "created_at",
     )
-    #readonly_fields = ("status", "allowed_comment")  
+    # readonly_fields = ("status", "allowed_comment")
     search_fields = (
         "content",
         "author__user__username",
@@ -38,7 +38,7 @@ class CommentAdmin(admin.ModelAdmin):
         "author__user__username",
         "post__content",
     )
-    
+
     list_filter = (
         "created_at",
         "updated_at",
@@ -57,5 +57,5 @@ class LikeAdmin(admin.ModelAdmin):
         "liked_by__user__username",
         "post__content",
     )
-     
+
     list_filter = ("created_at",)
