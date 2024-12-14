@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .permissions import IsPostOwnser, CanCommentOnPost
+from django.db.models import Q
 
 
 class PostApiView(generics.GenericAPIView):
@@ -15,9 +16,9 @@ class PostApiView(generics.GenericAPIView):
 
     def get_queryset(self):
 
-        # profile = get_object_or_404(Profile, user=self.request.user)
-        # queryset = Post.objects.filter(author=profile)
-        queryset = Post.objects.all()
+        profile = get_object_or_404(Profile, user=self.request.user)
+        isfollowed_author = profile.follower.all()
+        queryset = Post.objects.filter(Q(author__in=isfollowed_author) | Q(author=profile))
         return queryset
 
     def post(self, request, *args, **kwargs):

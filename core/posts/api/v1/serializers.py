@@ -14,6 +14,7 @@ class PostSerializer(serializers.ModelSerializer):
 
         rep = super().to_representation(instance)
         rep["author"] = instance.author.user.username
+        rep.pop("status")
         if self.context.get("id") is not None:
             rep["comments"] = CommentSerializer(
                 Comment.objects.filter(post=instance), many=True
