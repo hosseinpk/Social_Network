@@ -42,8 +42,6 @@ class CommentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
 
         post = self.context.get("post")
-        print(post.content, "*")
-        print(type(post))
         request = self.context.get("request")
         try:
             validated_data["author"] = Profile.objects.get(user=request.user)
@@ -57,6 +55,34 @@ class CommentSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         rep = super().to_representation(instance)
         rep["author"] = instance.author.user.username
-        rep["post"] = instance.post.content
+        rep.pop("post")
 
+        return rep
+
+
+class CommentDetailSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Comment
+        fields = "__all__"
+
+    def to_representation(self, instance):
+
+        rep = super().to_representation(instance)
+        rep.pop("post")
+        rep["author"] = instance.author.user.username
+
+        return rep
+
+
+class OtherUserPostSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Post
+        fields = "__all__"
+
+    def to_representation(self, instance):
+        rep=super().to_representation(instance)
+        rep.pop("status")
+        rep["author"] = instance.author.user.username
         return rep

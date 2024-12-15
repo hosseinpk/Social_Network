@@ -4,7 +4,14 @@ from accounts.models import Profile
 from django.shortcuts import get_object_or_404
 
 
-class IsPostOwnser(BasePermission):
+class IsPostOwner(BasePermission):
+
+    def has_object_permission(self, request, view, obj):
+
+        return obj.author.user == request.user
+
+
+class IsCommentOwner(BasePermission):
 
     def has_object_permission(self, request, view, obj):
 
@@ -27,4 +34,35 @@ class CanCommentOnPost(BasePermission):
         if profile.follower.filter(user=request.user).exists():
             return True
 
+        return False
+
+
+class CanLikePost(BasePermission):
+
+    def has_permission(self, request, view):
+
+        post = get_object_or_404(Post, id=view.kwargs["id"])
+        profile = post.author
+
+        if not profile.private:
+            return True
+
+        if profile.follower.filter(user=request.user).exists():
+
+            return True
+
+        return False
+
+
+class IsFollower(BasePermission):
+
+    def has_permission(self, request, view):
+        user = get_object_or_404(Profile, user=request.user)
+
+        profile = get_object_or_404(Profile, user__username=view.kwargs["slug"])
+
+        if user in profile.follower.all():
+            return True
+        if not profile.private:
+            return True
         return False

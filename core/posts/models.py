@@ -35,9 +35,16 @@ class Comment(models.Model):
 
 
 class Like(models.Model):
+
+    Like_CHOICES = [
+        (" ", " "),
+        ("like", "Like"),
+        ("dislike", "Dislike"),
+    ]
     liked_by = models.ForeignKey(Profile, on_delete=models.CASCADE)
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    reaction = models.CharField(max_length=7, choices=Like_CHOICES, default=" ")
 
     def __str__(self):
         return f"{self.liked_by} liked {self.post}"
