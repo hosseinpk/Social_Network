@@ -267,7 +267,6 @@ class FollowRequestApiView(generics.GenericAPIView):
             else:
                 from_user_id = request.user.id
                 to_user_id = instance.to_user.id
-
                 send_follow_request_email.delay(from_user_id, to_user_id)
                 data = {
                     "status": "success",
@@ -303,8 +302,7 @@ class AcceptOrRejectFollowRequestApiView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         sign = kwargs["sign"]
         id, action = decode_follow_request_token(sign)
-
-        follow_request = FollowRequest.objects.get(to_user=request.user.id)
+        follow_request = FollowRequest.objects.get(to_user=request.user,from_user=User.objects.get(id=id))
         to_user_profile = Profile.objects.get(user=request.user)
         from_user_profile = Profile.objects.get(user=follow_request.from_user)
         if action == "accept":
