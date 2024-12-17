@@ -6,7 +6,7 @@ from django.contrib.auth.models import (
 )
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import EmailValidator, RegexValidator
-from accounts.api.v1.validators import personal_code_validator
+from accounts.api.v1.validators import personal_code_validator, phone_number_validator
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 
@@ -66,12 +66,6 @@ class User(AbstractBaseUser, PermissionsMixin):
             if user.username != self.username:
                 raise ValidationError("Username cannot be changed.")
         return super().save(*args, **kwargs)
-
-
-phone_number_validator = RegexValidator(
-    regex=r"^(\+98|0)?9\d{9}$",  # Example regex for phone numbers
-    message="Phone number must be entered in the format: '+989*****' or '09*******'. Up to 13 digits allowed.",
-)
 
 
 class Profile(models.Model):

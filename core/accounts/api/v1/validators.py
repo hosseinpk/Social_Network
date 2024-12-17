@@ -1,6 +1,7 @@
-import re, string
+import re
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 
 
 def numeric_validator(password):
@@ -9,6 +10,12 @@ def numeric_validator(password):
         raise ValidationError(
             _("password must include number"), code="password_must_include_number"
         )
+
+
+phone_number_validator = RegexValidator(
+    regex=r"^(\+98|0)?9\d{9}$",
+    message="Phone number must be entered in the format: '+989*****' or '09*******'. Up to 13 digits allowed.",
+)
 
 
 def letter_validator(password):
@@ -36,7 +43,10 @@ def email_validator(email):
 
 def personal_code_validator(value: str):
     if not len(value) == 10:
-        raise ValidationError(_({"details": "personal code should be 10digits"}))
+        raise ValidationError(
+            _("personal code should be 10digits"),
+            code="personal_code_should_be_10digits",
+        )
 
     res = 0
     for i, num in enumerate(value[:-1]):
@@ -45,7 +55,7 @@ def personal_code_validator(value: str):
     remain = res % 11
     if remain < 2:
         if not remain == int(value[-1]):
-            raise ValidationError(_({"details": "wrong persoal code"}))
+            raise ValidationError(_("wrong persoal code"), code="wrong_persoal_code")
     else:
         if not (11 - remain) == int(value[-1]):
-            raise ValidationError(_({"details": "wrong persoal code"}))
+            raise ValidationError(_("wrong persoal code"), code="wrong_persoal_code")

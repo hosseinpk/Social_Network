@@ -3,6 +3,8 @@ from .validators import (
     special_character_validator,
     letter_validator,
     email_validator,
+    personal_code_validator,
+    phone_number_validator,
 )
 from django.core.validators import MinLengthValidator
 from rest_framework import serializers
@@ -282,6 +284,8 @@ class ResetForgetPasswordSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     user = serializers.CharField(read_only=True)
     username = serializers.CharField(source="user.username", read_only=True)
+    personal_code = serializers.CharField(validators=[personal_code_validator])
+    phone_number = serializers.CharField(validators=[phone_number_validator])
 
     class Meta:
         model = Profile
