@@ -251,8 +251,9 @@ class FollowRequestApiView(generics.GenericAPIView):
         description="send follow request for user,if user was public directly follow,if it was private send follow request"
     )
     def post(self, request, *args, **kwargs):
+        username = kwargs["slug"]
         serializer = AddFollowRequestSerializer(
-            data=request.data, context={"request": request}
+            data=request.data, context={"request": request,"username":username}
         )
         if serializer.is_valid():
             instance = serializer.save()

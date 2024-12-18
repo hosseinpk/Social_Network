@@ -6,11 +6,18 @@ from .serializers import (
     CommentSerializer,
     CommentDetailSerializer,
     OtherUserPostSerializer,
+    LikeSerializer,
 )
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from .permissions import IsPostOwner, CanCommentOnPost, IsCommentOwner, IsFollower
+from .permissions import (
+    IsPostOwner,
+    CanCommentOnPost,
+    IsCommentOwner,
+    IsFollower,
+    CanLikePost,
+)
 from django.db.models import Q
 from rest_framework.exceptions import PermissionDenied
 
@@ -205,3 +212,84 @@ class OtherUserPostApiView(generics.GenericAPIView):
             instance=queryset, many=True, context={"request": request}
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class LikeApiView(generics.GenericAPIView):
+
+    permission_classes = [IsAuthenticated, CanLikePost]
+    serializer_class = LikeSerializer
+
+    def get_object(self):
+
+        return get_object_or_404(Post, id=self.kwargs["id"])
+
+    def get_queryset(self):
+
+        return Like.objects.filter(post=self.get_object())
+
+    def post(self, request, *args, **kwargs):
+
+        post = self.get_object()
+        serializer = LikeSerializer(
+            data=request.data, context={"request": request, "post": post}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+
+    def get(self, request, *args, **kwargs):
+
+        quryset = self.get_queryset()
+        serializer = LikeSerializer(
+            instance=quryset, context={"request": request}, many=True
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+
+class LikeDetailApiView(generics.GenericAPIView):
+
+    permission_classes = [IsAuthenticated, CanLikePost]
+    serializer_class = LikeSerializer    
+
+    def get_object(self):
+
+        post = get_object_or_404(Post, id=self.kwargs["id"])
+        obj = get_object_or_404(
+            Like, id=self.kwargs["like_id"], post=post, liked_by=get_object_or_404(Profile,user=self.request.user)
+        )
+        return obj
+    
+    def get(self, request, *args, **kwargs):
+        post = get_object_or_404(Post, id=self.kwargs["id"])
+        obj = self.get_object()
+        serializer = LikeSerializer(instance = obj,context={"request": request,"post":post})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+    def put(self, request, *args, **kwargs):
+
+        obj = self.get_object()
+        post = get_object_or_404(Post, id=self.kwargs["id"])
+        serializer = LikeSerializer(
+            instance=obj,
+            data=request.data,
+            context={"request": request, "post": post},
+            partial=True,
+        )
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+    
+    def delete(self, request, *args, **kwargs):
+
+        obj = self.get_object()
+        obj.delete()
+        return Response(
+            {"detail": "Like deleted successfully."}, status=status.HTTP_204_NO_CONTENT
+        )
+

@@ -18,6 +18,7 @@ import jwt
 from jwt import exceptions
 from django.conf import settings
 from django.db import IntegrityError
+from rest_framework.exceptions import PermissionDenied
 
 User = get_user_model()
 
@@ -339,6 +340,7 @@ class AddFollowRequestSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context["request"]
+        username = self.context["username"]
         from_user = request.user
         to_user = validated_data["to_user"]
 
@@ -347,6 +349,15 @@ class AddFollowRequestSerializer(serializers.ModelSerializer):
             from_user = Profile.objects.get(user__email=from_user.email)
         except Profile.DoesNotExist:
             raise serializers.ValidationError({"details": "profile not found"})
+
+        if to_user==from_user:
+            raise serializers.ValidationError({"details": "You cannot follow yourself."})
+        
+        if to_user != Profile.objects.get(user__username=username):
+            raise PermissionDenied(
+                {"details": "You can follow this user from their profile."}
+            )
+        
 
         if not to_user.private:
             try:
