@@ -40,8 +40,11 @@ class CanCommentOnPost(BasePermission):
 class CanLikePost(BasePermission):
 
     def has_permission(self, request, view):
-
-        post = get_object_or_404(Post, id=view.kwargs["id"])
+        
+        try:
+            post = get_object_or_404(Post, id=view.kwargs["id"])
+        except Post.DoesNotExist:
+            return False
         profile = post.author
 
         if not profile.private:

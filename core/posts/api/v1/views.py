@@ -30,7 +30,7 @@ class PostApiView(generics.GenericAPIView):
     def get_queryset(self):
 
         profile = get_object_or_404(Profile, user=self.request.user)
-        isfollowed_author = profile.follower.all()
+        isfollowed_author = profile.following.all()
         queryset = Post.objects.filter(
             Q(author__in=isfollowed_author) | Q(author=profile)
         )
@@ -74,7 +74,7 @@ class GetPostDetailsApiView(generics.GenericAPIView):
     def get_object(self):
 
         profile = get_object_or_404(Profile, user=self.request.user)
-        isfollowed_author = profile.follower.values_list("user__id", flat=True)
+        isfollowed_author = profile.following.values_list("user__id", flat=True)
         obj = get_object_or_404(Post, id=self.kwargs["id"])
         if (
             obj.author.user.id in isfollowed_author
