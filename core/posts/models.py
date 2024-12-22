@@ -46,9 +46,8 @@ class Like(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     reaction = models.CharField(max_length=7, choices=Like_CHOICES, default=" ")
 
-
     class Meta:
-        unique_together = ('liked_by', 'post')
+        unique_together = ("liked_by", "post")
 
     def __str__(self):
         return f"{self.liked_by} liked {self.post}"

@@ -46,7 +46,9 @@ class PostApiView(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
 
-        queryset = self.get_queryset().filter(status="published")
+        queryset = (
+            self.get_queryset().filter(status="published").order_by("-created_at")
+        )
         serializer = PostSerializer(
             instance=queryset, many=True, context={request: "request"}
         )
@@ -72,13 +74,13 @@ class GetPostDetailsApiView(generics.GenericAPIView):
     def get_object(self):
 
         profile = get_object_or_404(Profile, user=self.request.user)
-        isfollowed_author = profile.follower.all()
+        isfollowed_author = profile.follower.values_list("user__id", flat=True)
         obj = get_object_or_404(Post, id=self.kwargs["id"])
-
-        if obj.author in isfollowed_author:
-
+        if (
+            obj.author.user.id in isfollowed_author
+            or obj.author.user == self.request.user
+        ):
             return obj
-
         else:
             raise PermissionDenied(
                 {"details": "you dont have permission to access this post"}
@@ -247,27 +249,29 @@ class LikeApiView(generics.GenericAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-
-
 class LikeDetailApiView(generics.GenericAPIView):
 
     permission_classes = [IsAuthenticated, CanLikePost]
-    serializer_class = LikeSerializer    
+    serializer_class = LikeSerializer
 
     def get_object(self):
 
         post = get_object_or_404(Post, id=self.kwargs["id"])
         obj = get_object_or_404(
-            Like, id=self.kwargs["like_id"], post=post, liked_by=get_object_or_404(Profile,user=self.request.user)
+            Like,
+            id=self.kwargs["like_id"],
+            post=post,
+            liked_by=get_object_or_404(Profile, user=self.request.user),
         )
         return obj
-    
+
     def get(self, request, *args, **kwargs):
         post = get_object_or_404(Post, id=self.kwargs["id"])
         obj = self.get_object()
-        serializer = LikeSerializer(instance = obj,context={"request": request,"post":post})
+        serializer = LikeSerializer(
+            instance=obj, context={"request": request, "post": post}
+        )
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 
     def put(self, request, *args, **kwargs):
 
@@ -284,7 +288,7 @@ class LikeDetailApiView(generics.GenericAPIView):
         serializer.save()
 
         return Response(data=serializer.data, status=status.HTTP_200_OK)
-    
+
     def delete(self, request, *args, **kwargs):
 
         obj = self.get_object()
@@ -292,4 +296,3 @@ class LikeDetailApiView(generics.GenericAPIView):
         return Response(
             {"detail": "Like deleted successfully."}, status=status.HTTP_204_NO_CONTENT
         )
-

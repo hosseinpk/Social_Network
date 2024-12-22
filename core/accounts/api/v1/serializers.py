@@ -330,6 +330,43 @@ class ProfileSerializer(serializers.ModelSerializer):
 
         return data
 
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        request = self.context.get("request")
+        phone = data.get("phone_number")
+        code = data.get("personal_code")
+        try:
+            profile = Profile.objects.get(user=request.user)
+            if profile.personal_code:
+                if profile.personal_code != code:
+                    raise serializers.ValidationError(
+                        {
+                            "details": "You cannot change your personal code once it is set."
+                        }
+                    )
+        except Profile.DoesNotExist:
+            pass
+
+        try:
+            is_exist_phone = Profile.objects.get(phone_number=phone)
+
+            if is_exist_phone.user != request.user:
+                raise serializers.ValidationError(
+                    {"details": "This phone number belongs to another user."}
+                )
+        except Profile.DoesNotExist:
+            pass
+        try:
+            is_exist_code = Profile.objects.get(personal_code=code)
+            if is_exist_code.user != request.user:
+                raise serializers.ValidationError(
+                    {"details": "this personal code belong to another user"}
+                )
+
+        except Profile.DoesNotExist:
+            pass
+        return data
+
 
 class AddFollowRequestSerializer(serializers.ModelSerializer):
 
@@ -350,14 +387,15 @@ class AddFollowRequestSerializer(serializers.ModelSerializer):
         except Profile.DoesNotExist:
             raise serializers.ValidationError({"details": "profile not found"})
 
-        if to_user==from_user:
-            raise serializers.ValidationError({"details": "You cannot follow yourself."})
-        
+        if to_user == from_user:
+            raise serializers.ValidationError(
+                {"details": "You cannot follow yourself."}
+            )
+
         if to_user != Profile.objects.get(user__username=username):
             raise PermissionDenied(
                 {"details": "You can follow this user from their profile."}
             )
-        
 
         if not to_user.private:
             try:

@@ -253,7 +253,7 @@ class FollowRequestApiView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         username = kwargs["slug"]
         serializer = AddFollowRequestSerializer(
-            data=request.data, context={"request": request,"username":username}
+            data=request.data, context={"request": request, "username": username}
         )
         if serializer.is_valid():
             instance = serializer.save()

@@ -20,10 +20,10 @@ class PostSerializer(serializers.ModelSerializer):
                 Comment.objects.filter(post=instance), many=True
             ).data
             rep["like"] = LikeSerializer(
-                Like.objects.filter(reaction="like"), many=True
+                Like.objects.filter(post=instance, reaction="like"), many=True
             ).data
             rep["dislike"] = LikeSerializer(
-                Like.objects.filter(reaction="dislike"), many=True
+                Like.objects.filter(post=instance, reaction="dislike"), many=True
             ).data
 
         return rep
@@ -103,17 +103,18 @@ class LikeSerializer(serializers.ModelSerializer):
         read_only_fields = ["post", "liked_by"]
 
     def validate(self, attrs):
-        
+
         post = self.context.get("post")
         request = self.context.get("request")
         profile = Profile.objects.get(user=request.user)
 
         if Like.objects.filter(post=post, liked_by=profile).exists():
-            if request.method=="PUT":
+            if request.method == "PUT":
                 return super().validate(attrs)
-            raise serializers.ValidationError({"details":"You have already reacted to this post."})
+            raise serializers.ValidationError(
+                {"details": "You have already reacted to this post."}
+            )
         return super().validate(attrs)
-        
 
     def create(self, validated_data):
         post = self.context.get("post")
@@ -132,7 +133,7 @@ class LikeSerializer(serializers.ModelSerializer):
         rep.pop("post")
 
         return rep
-    
+
     def update(self, instance, validated_data):
         if "reaction" in validated_data:
             instance.reaction = validated_data["reaction"]
