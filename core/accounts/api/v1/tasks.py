@@ -47,3 +47,8 @@ def send_follow_request_email(from_user_id, to_user_id):
     )
     mail.send()
     return "follow request email sent"
+
+@shared_task
+def send_otp(id, otp):
+    user = User.objects.get(id=id)
+    return (f"Sending OTP {otp} to user {user.email}")

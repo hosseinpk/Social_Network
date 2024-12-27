@@ -19,6 +19,9 @@ from jwt import exceptions
 from django.conf import settings
 from django.db import IntegrityError
 from rest_framework.exceptions import PermissionDenied
+from django.core.cache import cache
+from django.db.models import Q
+from .tasks import send_otp
 
 User = get_user_model()
 
@@ -79,42 +82,60 @@ class LoginSerializer(serializers.Serializer):
         password = validated_data["password"]
         request = self.context.get("request")
 
-        if email_validator(username) is None:
-            try:
-                username = User.objects.get(username=username)
-                user = authenticate(
-                    request=request, username=username, password=password
+        try:
+            if email_validator(username):
+                user = authenticate(request=request, username=username, password=password)
+            else:
+                user = authenticate(request=request, username=username, password=password)
+
+            if user is None:
+                raise serializers.ValidationError({"details": "wrong username or password"})
+
+            if not user.is_verified:
+                raise serializers.ValidationError(
+                    {"details": "you should verified your account before login!!!"}
                 )
+            otp = user.generate_otp()
+            cache.set(f"otp_{user.id}",otp,timeout=120)
+            validated_data["id"] = user.id
+            validated_data["otp"] = otp 
+            send_otp.delay(user.id, otp)
+            print(f"{otp} sent to user {user.id}")
+            return validated_data
+        
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"details": "user does not exist"})
 
-            except User.DoesNotExist:
-                raise serializers.ValidationError({"details": "user does not exist"})
+class OTPVerificationSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(required=True)
+    otp = serializers.CharField(required=True)
 
-        else:
-            try:
-                username = User.objects.get(email=username)
-                user = authenticate(
-                    request=request, username=username, password=password
-                )
+    def validate(self, attrs):
+        validated_data = super().validate(attrs)
+        user_id = validated_data.get("user_id")
+        otp = validated_data.get("otp")
 
-            except User.DoesNotExist:
-                raise serializers.ValidationError({"details": "user does not exist"})
-        if user is None:
-            raise serializers.ValidationError({"details": "wrong username or password"})
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"details": "User does not exist."})
 
-        if not user.is_verified:
-            raise serializers.ValidationError(
-                {"details": "you should verified your account before login!!!"}
-            )
+        
+        cached_otp = cache.get(f"otp_{user.id}")
+        if cached_otp != otp:
+            raise serializers.ValidationError({"details": "Invalid or expired OTP."})
+
+        
 
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
-
-        validated_data["is_staff"] = user.is_staff
         validated_data["access"] = str(access)
         validated_data["refresh"] = str(refresh)
-        validated_data.pop("password")
+        validated_data["is_staff"] = user.is_staff
 
         return validated_data
+
 
 
 class LogOutSerializer(serializers.Serializer):

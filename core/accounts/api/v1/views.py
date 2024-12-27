@@ -16,6 +16,7 @@ from .serializers import (
     LogOutSerializer,
     UnfollowSerializer,
     DeleteFollowRequest,
+    OTPVerificationSerializer
 )
 from .permissions import IsProfileOwner
 from accounts.models import Profile, FollowRequest
@@ -65,13 +66,25 @@ class LoginApiView(generics.GenericAPIView):
         serializer = LoginSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             data = {
+                "id" : serializer.validated_data["id"],
+                "otp" : serializer.validated_data["otp"]
+            }
+            return Response(data=data, status=status.HTTP_200_OK)
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class OTPVerificationView(generics.GenericAPIView):
+    serializer_class = OTPVerificationSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)  
+        if serializer.is_valid():
+            data = {
                 "is_staff": serializer.validated_data["is_staff"],
                 "access": serializer.validated_data["access"],
                 "refresh": serializer.validated_data["refresh"],
             }
             return Response(data=data, status=status.HTTP_200_OK)
-        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LogoutApiView(generics.GenericAPIView):
 

@@ -9,6 +9,7 @@ from django.core.validators import EmailValidator, RegexValidator
 from accounts.api.v1.validators import personal_code_validator, phone_number_validator
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
+import pyotp
 
 
 # Create your models here.
@@ -50,6 +51,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
+    secret_key = models.CharField(max_length=32, default=pyotp.random_base32, editable=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
@@ -66,6 +68,17 @@ class User(AbstractBaseUser, PermissionsMixin):
             if user.username != self.username:
                 raise ValidationError("Username cannot be changed.")
         return super().save(*args, **kwargs)
+    
+
+    def generate_otp(self):
+
+        totp = pyotp.TOTP(self.secret_key)
+        return totp.now()
+
+    def verify_otp(self, otp):
+
+        totp = pyotp.TOTP(self.secret_key)
+        return totp.verify(otp, valid_window=1)
 
 
 class Profile(models.Model):
