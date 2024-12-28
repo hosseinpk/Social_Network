@@ -136,6 +136,40 @@ class OTPVerificationSerializer(serializers.Serializer):
 
         return validated_data
 
+class ResendOTPSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(required=True)
+
+    def validate(self, attrs):
+        user_id = attrs.get("user_id")
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"details": "User does not exist."})
+
+        attrs["user"] = user
+        return attrs
+
+    def save(self):
+        user = self.validated_data["user"]
+
+        # Check rate limit
+        if cache.get(f"resend_otp_limit_{user.id}"):
+            raise serializers.ValidationError(
+                {"details": "Please wait before requesting a new OTP."}
+            )
+
+        # Set rate limit (e.g., 30 seconds)
+        cache.set(f"resend_otp_limit_{user.id}", True, timeout=30)
+
+        # Generate a new OTP
+        otp = user.generate_otp()
+        cache.set(f"otp_{user.id}", otp, timeout=120)  # Set OTP in cache for 2 minutes
+
+        # Use Celery to send the OTP asynchronously
+        send_otp.delay(user.id, otp)
+
+        return {"message": f"OTP resent to {user.email}"}
 
 
 class LogOutSerializer(serializers.Serializer):

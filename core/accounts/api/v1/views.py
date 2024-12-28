@@ -16,7 +16,8 @@ from .serializers import (
     LogOutSerializer,
     UnfollowSerializer,
     DeleteFollowRequest,
-    OTPVerificationSerializer
+    OTPVerificationSerializer,
+    ResendOTPSerializer
 )
 from .permissions import IsProfileOwner
 from accounts.models import Profile, FollowRequest
@@ -33,7 +34,7 @@ from drf_spectacular.utils import extend_schema
 
 User = get_user_model()
 
-
+@extend_schema(tags=["Authentication"], description="User registration endpoint.")
 class RegistrationApiView(generics.GenericAPIView):
     serializer_class = RegistrationSerializer
 
@@ -58,7 +59,7 @@ class RegistrationApiView(generics.GenericAPIView):
             return Response(data=data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+@extend_schema(tags=["Authentication"], description="User login endpoint.")
 class LoginApiView(generics.GenericAPIView):
     serializer_class = LoginSerializer
 
@@ -72,6 +73,7 @@ class LoginApiView(generics.GenericAPIView):
             return Response(data=data, status=status.HTTP_200_OK)
         return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@extend_schema(tags=["Authentication"], description="OTP verification for login.")
 class OTPVerificationView(generics.GenericAPIView):
     serializer_class = OTPVerificationSerializer
 
@@ -86,6 +88,18 @@ class OTPVerificationView(generics.GenericAPIView):
             return Response(data=data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@extend_schema(tags=["Authentication"], description="Resend OTP for login.")
+class ResendOTPView(generics.GenericAPIView):
+    serializer_class = ResendOTPSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            result = serializer.save()
+            return Response(result, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@extend_schema(tags=["Authentication"], description="Logout endpoint.")
 class LogoutApiView(generics.GenericAPIView):
 
     serializer_class = LogOutSerializer
@@ -101,6 +115,7 @@ class LogoutApiView(generics.GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=["Authentication"], description="User Activation endpoint.")
 class ActivationApiview(views.APIView):
     @extend_schema(description="activation for new user")
     def get(self, request, *args, **kwargs):
@@ -125,6 +140,7 @@ class ActivationApiview(views.APIView):
         return Response({"details": "user has been verified"})
 
 
+@extend_schema(tags=["Authentication"], description="Resend User Activation endpoint.")
 class ResendActivationApiview(generics.GenericAPIView):
     serializer_class = ResendActivationSerializer
 
@@ -142,7 +158,7 @@ class ResendActivationApiview(generics.GenericAPIView):
             {"details": "activation email resend!!"}, status=status.HTTP_200_OK
         )
 
-
+@extend_schema(tags=["Authentication"], description="User Reset Password endpoint.")
 class ResetPasswordApiview(generics.GenericAPIView):
     serializer_class = ResetPasswordSerializer
     permission_classes = [IsAuthenticated]
@@ -158,6 +174,7 @@ class ResetPasswordApiview(generics.GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=["Authentication"], description="User Forget Password endpoint.")
 class ForgetpasswordApiView(generics.GenericAPIView):
     serializer_class = ForgetpassworSerializer
 
@@ -177,6 +194,7 @@ class ForgetpasswordApiView(generics.GenericAPIView):
             )
 
 
+@extend_schema(tags=["Authentication"], description="User Reset Password endpoint.")
 class ResetForgetpasswordApiView(generics.GenericAPIView):
     serializer_class = ResetForgetPasswordSerializer
 
@@ -192,6 +210,7 @@ class ResetForgetpasswordApiView(generics.GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=["Profile"], description="Retrieve or update a user profile.")
 class ProfileApiView(generics.GenericAPIView):
     serializer_class = ProfileSerializer
     permission_classes = [IsAuthenticated]
@@ -256,6 +275,7 @@ class ProfileApiView(generics.GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=["Follow Requests"], description="Send a follow request to a user.")
 class FollowRequestApiView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = AddFollowRequestSerializer
@@ -292,6 +312,7 @@ class FollowRequestApiView(generics.GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=["Follow Requests"], description="Delete a pending follow request.")
 class DeleteFollowRequestApiView(generics.GenericAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -309,6 +330,7 @@ class DeleteFollowRequestApiView(generics.GenericAPIView):
         return Response(data=data, status=status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Follow Requests"], description="Accept or Reject follow request.")
 class AcceptOrRejectFollowRequestApiView(generics.GenericAPIView):
 
     permission_classes = [IsAuthenticated]
@@ -342,7 +364,7 @@ class AcceptOrRejectFollowRequestApiView(generics.GenericAPIView):
             {"detail": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST
         )
 
-
+@extend_schema(tags=["Follow Requests"], description="Get follow request.")
 class GetFollowRequestApiView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated, IsProfileOwner]
     serializer_class = GetFollowRequestSerializer
@@ -361,6 +383,7 @@ class GetFollowRequestApiView(generics.GenericAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Follow Requests"], description="remove follow request.")
 class RemoveFollowerApiView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer = UnfollowSerializer

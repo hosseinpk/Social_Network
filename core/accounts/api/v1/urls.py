@@ -36,6 +36,7 @@ urlpatterns = [
     path("registration/", views.RegistrationApiView.as_view(), name="registration"),
     path("login/", views.LoginApiView.as_view(), name="login"),
     path('verifyotp/', views.OTPVerificationView.as_view(), name='verify-otp'),
+    path("resendotp/", views.ResendOTPView.as_view(), name="resend-otp"),
     path("logout/", views.LogoutApiView.as_view(), name="logout"),
     path("verify/", TokenVerifyView.as_view(), name="verify"),
     path("refresh/", TokenRefreshView.as_view(), name="refresh"),
