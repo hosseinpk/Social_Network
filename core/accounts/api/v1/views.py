@@ -99,11 +99,12 @@ class ResendOTPView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            otp = serializer.save()
+
             data = {
-                "otp": otp["otp"]
+                "id": serializer.validated_data["id"],
+                "otp": serializer.validated_data["otp"],
             }
-            return Response(data = data, status=status.HTTP_200_OK)
+            return Response(data=data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
