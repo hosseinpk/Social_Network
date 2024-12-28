@@ -21,7 +21,7 @@ class CustomUserAdmin(UserAdmin):
         "is_superuser",
         "is_staff",
         "is_verified",
-        "secret_key"
+        "secret_key",
     )
     list_filter = (
         "email",
@@ -29,7 +29,7 @@ class CustomUserAdmin(UserAdmin):
         "is_superuser",
         "is_staff",
     )
-    #readonly_fields = ("username", "email")
+    # readonly_fields = ("username", "email")
     search_fields = ("email",)
     ordering = ("email",)
     fieldsets = (

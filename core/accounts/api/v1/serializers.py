@@ -84,27 +84,34 @@ class LoginSerializer(serializers.Serializer):
 
         try:
             if email_validator(username):
-                user = authenticate(request=request, username=username, password=password)
+                user = authenticate(
+                    request=request, username=username, password=password
+                )
             else:
-                user = authenticate(request=request, username=username, password=password)
+                user = authenticate(
+                    request=request, username=username, password=password
+                )
 
             if user is None:
-                raise serializers.ValidationError({"details": "wrong username or password"})
+                raise serializers.ValidationError(
+                    {"details": "wrong username or password"}
+                )
 
             if not user.is_verified:
                 raise serializers.ValidationError(
                     {"details": "you should verified your account before login!!!"}
                 )
             otp = user.generate_otp()
-            cache.set(f"otp_{user.id}",otp,timeout=120)
+            cache.set(f"otp_{user.id}", otp, timeout=120)
             validated_data["id"] = user.id
-            validated_data["otp"] = otp 
+            validated_data["otp"] = otp
             send_otp.delay(user.id, otp)
             print(f"{otp} sent to user {user.id}")
             return validated_data
-        
+
         except User.DoesNotExist:
             raise serializers.ValidationError({"details": "user does not exist"})
+
 
 class OTPVerificationSerializer(serializers.Serializer):
     user_id = serializers.IntegerField(required=True)
@@ -115,18 +122,14 @@ class OTPVerificationSerializer(serializers.Serializer):
         user_id = validated_data.get("user_id")
         otp = validated_data.get("otp")
 
-        
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             raise serializers.ValidationError({"details": "User does not exist."})
 
-        
         cached_otp = cache.get(f"otp_{user.id}")
         if cached_otp != otp:
             raise serializers.ValidationError({"details": "Invalid or expired OTP."})
-
-        
 
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
@@ -135,6 +138,7 @@ class OTPVerificationSerializer(serializers.Serializer):
         validated_data["is_staff"] = user.is_staff
 
         return validated_data
+
 
 class ResendOTPSerializer(serializers.Serializer):
     user_id = serializers.IntegerField(required=True)

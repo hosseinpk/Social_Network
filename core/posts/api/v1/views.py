@@ -20,6 +20,7 @@ from .permissions import (
 )
 from django.db.models import Q
 from rest_framework.exceptions import PermissionDenied
+from drf_spectacular.utils import extend_schema
 
 
 class PostApiView(generics.GenericAPIView):
@@ -124,6 +125,7 @@ class GetPostDetailsApiView(generics.GenericAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=["Comment"], description="Comment for Post.")
 class CommentApiView(generics.GenericAPIView):
 
     permission_classes = [IsAuthenticated, CanCommentOnPost]
@@ -156,6 +158,7 @@ class CommentApiView(generics.GenericAPIView):
         return Response(serializer.data)
 
 
+@extend_schema(tags=["Comment"], description="Detail of Comment for Post.")
 class CommentDetailApiView(generics.GenericAPIView):
 
     permission_classes = [
@@ -216,6 +219,7 @@ class OtherUserPostApiView(generics.GenericAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Like"], description="Like for Post.")
 class LikeApiView(generics.GenericAPIView):
 
     permission_classes = [IsAuthenticated, CanLikePost]
@@ -249,6 +253,7 @@ class LikeApiView(generics.GenericAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(tags=["Like"], description="Detail of Like for Post.")
 class LikeDetailApiView(generics.GenericAPIView):
 
     permission_classes = [IsAuthenticated, CanLikePost]

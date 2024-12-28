@@ -51,7 +51,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
-    secret_key = models.CharField(max_length=32, default=pyotp.random_base32, editable=False)
+    secret_key = models.CharField(
+        max_length=32, default=pyotp.random_base32, editable=False
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
@@ -68,7 +70,6 @@ class User(AbstractBaseUser, PermissionsMixin):
             if user.username != self.username:
                 raise ValidationError("Username cannot be changed.")
         return super().save(*args, **kwargs)
-    
 
     def generate_otp(self):
 

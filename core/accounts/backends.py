@@ -13,7 +13,6 @@ class EmailOrUsernameBackend(BaseBackend):
                 return user
         except User.DoesNotExist:
             return None
-        
 
     def user_can_authenticate(self, user):
         return user.is_active

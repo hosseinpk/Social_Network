@@ -40,7 +40,7 @@ class CanCommentOnPost(BasePermission):
 class CanLikePost(BasePermission):
 
     def has_permission(self, request, view):
-        
+
         try:
             post = get_object_or_404(Post, id=view.kwargs["id"])
         except Post.DoesNotExist:
