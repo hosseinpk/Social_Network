@@ -172,8 +172,8 @@ class ResendOTPSerializer(serializers.Serializer):
 
         # Use Celery to send the OTP asynchronously
         send_otp.delay(user.id, otp)
-
-        return {"message": f"OTP resent to {user.email}"}
+        self.validated_data["otp"] = otp
+        return self.validated_data
 
 
 class LogOutSerializer(serializers.Serializer):
