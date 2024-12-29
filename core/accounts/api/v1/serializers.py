@@ -14,6 +14,7 @@ from django.core import exceptions as e
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db import transaction
 import jwt
 from jwt import exceptions
 from django.conf import settings
@@ -64,9 +65,14 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop("password1")
-        user = User.objects.create_user(**validated_data)
-        Profile.objects.create(user=user)
-        return user
+        
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(**validated_data)
+                Profile.objects.create(user=user)
+                return user
+        except Exception as e:
+            raise serializers.ValidationError({"detail": "Registration failed. Please try again."})
 
 
 class LoginSerializer(serializers.Serializer):
