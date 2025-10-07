@@ -10,7 +10,7 @@ services:
     environment:
 
       RABBITMQ_DEFAULT_USER: ${RMUSER}
-      RABBITMQ_DEFAULT_PASS: ${RMPASS}    
+      RABBITMQ_DEFAULT_PASS: ${RMPASS}
 
     networks:
 
@@ -34,15 +34,22 @@ services:
   django:
     build: .
     command: >
-      sh -c "python manage.py makemigrations &&
+      sh -c 'python manage.py makemigrations &&
              python manage.py migrate &&
              python manage.py collectstatic --noinput &&
-             gunicorn core.wsgi --bind 0.0.0.0:8000"
+             gunicorn core.wsgi --bind 0.0.0.0:8000'
     volumes:
       - ./core:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
 
     networks:
       - social
@@ -50,11 +57,12 @@ services:
       - rabbitmq
       - redis
       - db
+    restart: always
   db:
     image: postgres:16
     container_name: db
     volumes:
-      - ./db:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -70,6 +78,11 @@ services:
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
 
     depends_on:
       - rabbitmq
@@ -113,6 +126,7 @@ volumes:
   smtp4dev-data:
   static_volume:
   media_volume:
+  pgdata:
 
 
 networks:
