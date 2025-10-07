@@ -6,12 +6,19 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+
+    environment:
+
+      RABBITMQ_DEFAULT_USER: ${RMUSER}
+      RABBITMQ_DEFAULT_PASS: ${RMPASS}    
+
     networks:
+
       - social
     volumes:
       - ./rabbitmq/rabbit_data/:/var/lib/rabbitmq/
       - ./rabbitmq/rabbit_log/:/var/log/rabbitmq/
-    restart: on-failure  
+    restart: on-failure
 
   redis:
     image: redis:7.4.1-alpine
@@ -26,20 +33,35 @@ services:
 
   django:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn core.wsgi --bind 0.0.0.0:8000"
     volumes:
       - ./core:/app
-    ports:
-      - 8000:8000
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG}
-    
+
     networks:
       - social
     depends_on:
       - rabbitmq
       - redis
+      - db
+  db:
+    image: postgres:16
+    container_name: db
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    restart: unless-stopped
+    networks:
+      - social
   worker:
     build: .
     command: celery -A core worker --loglevel=info
@@ -48,12 +70,12 @@ services:
     environment:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG}
-      
+
     depends_on:
       - rabbitmq
       - django
     restart: on-failure
-    
+
     networks:
       - social
 
@@ -70,11 +92,27 @@ services:
 
     - ServerOptions__Urls=http://*:80
     - ServerOptions__HostName=smtp4dev
+    depends_on:
+      - django
     networks:
       - social
-
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - django
+    restart: always
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/home/app/static
+      - media_volume:/home/app/media
+    networks:
+      - social
 volumes:
   smtp4dev-data:
+  static_volume:
+  media_volume:
 
 
 networks:
