@@ -15,4 +15,5 @@ redis
 gunicorn
 ipython
 django-mail-templated
+pyotp
 

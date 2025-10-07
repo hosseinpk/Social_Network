@@ -3,6 +3,8 @@ from .validators import (
     special_character_validator,
     letter_validator,
     email_validator,
+    personal_code_validator,
+    phone_number_validator,
 )
 from django.core.validators import MinLengthValidator
 from rest_framework import serializers
@@ -12,10 +14,15 @@ from django.core import exceptions as e
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db import transaction
 import jwt
 from jwt import exceptions
 from django.conf import settings
 from django.db import IntegrityError
+from rest_framework.exceptions import PermissionDenied
+from django.core.cache import cache
+from django.db.models import Q
+from .tasks import send_otp
 
 User = get_user_model()
 
@@ -58,9 +65,14 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop("password1")
-        user = User.objects.create_user(**validated_data)
-        Profile.objects.create(user=user)
-        return user
+        
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(**validated_data)
+                Profile.objects.create(user=user)
+                return user
+        except Exception as e:
+            raise serializers.ValidationError({"detail": "Registration failed. Please try again."})
 
 
 class LoginSerializer(serializers.Serializer):
@@ -76,40 +88,92 @@ class LoginSerializer(serializers.Serializer):
         password = validated_data["password"]
         request = self.context.get("request")
 
-        if email_validator(username) is None:
-            try:
-                username = User.objects.get(username=username)
+        try:
+            if email_validator(username):
+                user = authenticate(
+                    request=request, username=username, password=password
+                )
+            else:
                 user = authenticate(
                     request=request, username=username, password=password
                 )
 
-            except User.DoesNotExist:
-                raise serializers.ValidationError({"details": "user does not exist"})
-
-        else:
-            try:
-                username = User.objects.get(email=username)
-                user = authenticate(
-                    request=request, username=username, password=password
+            if user is None:
+                raise serializers.ValidationError(
+                    {"details": "wrong username or password"}
                 )
 
-            except User.DoesNotExist:
-                raise serializers.ValidationError({"details": "user does not exist"})
-        if user is None:
-            raise serializers.ValidationError({"details": "wrong username or password"})
+            if not user.is_verified:
+                raise serializers.ValidationError(
+                    {"details": "you should verified your account before login!!!"}
+                )
+            otp = user.generate_otp()
+            cache.set(f"otp_{user.id}", otp, timeout=120)
+            validated_data["id"] = user.id
+            validated_data["otp"] = otp
+            send_otp.delay(user.id, otp)
+            print(f"{otp} sent to user {user.id}")
+            return validated_data
 
-        if not user.is_verified:
-            raise serializers.ValidationError(
-                {"details": "you should verified your account before login!!!"}
-            )
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"details": "user does not exist"})
+
+
+class OTPVerificationSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(required=True)
+    otp = serializers.CharField(required=True)
+
+    def validate(self, attrs):
+        validated_data = super().validate(attrs)
+        user_id = validated_data.get("user_id")
+        otp = validated_data.get("otp")
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"details": "User does not exist."})
+
+        cached_otp = cache.get(f"otp_{user.id}")
+        if cached_otp != otp:
+            raise serializers.ValidationError({"details": "Invalid or expired OTP."})
 
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
-
-        validated_data["is_staff"] = user.is_staff
         validated_data["access"] = str(access)
         validated_data["refresh"] = str(refresh)
-        validated_data.pop("password")
+        validated_data["is_staff"] = user.is_staff
+
+        return validated_data
+
+
+class ResendOTPSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(required=True)
+
+    def validate(self, attrs):
+        validated_data = super().validate(attrs)
+        user_id = validated_data.get("user_id")
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"details": "User does not exist."})
+
+        if cache.get(f"resend_otp_limit_{user.id}"):
+            raise serializers.ValidationError(
+                {"details": "Please wait before requesting a new OTP."}
+            )
+
+        # Set rate limit (e.g., 30 seconds)
+        cache.set(f"resend_otp_limit_{user.id}", True, timeout=30)
+
+        # Generate a new OTP
+        otp = user.generate_otp()
+        cache.set(f"otp_{user.id}", otp, timeout=120)  # Set OTP in cache for 2 minutes
+
+        # Use Celery to send the OTP asynchronously
+        send_otp.delay(user.id, otp)
+        validated_data["otp"] = otp
+        validated_data["id"] = user.id
 
         return validated_data
 
@@ -282,6 +346,8 @@ class ResetForgetPasswordSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     user = serializers.CharField(read_only=True)
     username = serializers.CharField(source="user.username", read_only=True)
+    personal_code = serializers.CharField(validators=[personal_code_validator])
+    phone_number = serializers.CharField(validators=[phone_number_validator])
 
     class Meta:
         model = Profile
@@ -302,7 +368,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         id = self.context.get("id")
         data = super().to_representation(instance)
-        if id != None:
+        if id is not None:
             data.pop("user")
             data.pop("first_name")
             data.pop("last_name")
@@ -325,6 +391,43 @@ class ProfileSerializer(serializers.ModelSerializer):
 
         return data
 
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        request = self.context.get("request")
+        phone = data.get("phone_number")
+        code = data.get("personal_code")
+        try:
+            profile = Profile.objects.get(user=request.user)
+            if profile.personal_code:
+                if profile.personal_code != code:
+                    raise serializers.ValidationError(
+                        {
+                            "details": "You cannot change your personal code once it is set."
+                        }
+                    )
+        except Profile.DoesNotExist:
+            pass
+
+        try:
+            is_exist_phone = Profile.objects.get(phone_number=phone)
+
+            if is_exist_phone.user != request.user:
+                raise serializers.ValidationError(
+                    {"details": "This phone number belongs to another user."}
+                )
+        except Profile.DoesNotExist:
+            pass
+        try:
+            is_exist_code = Profile.objects.get(personal_code=code)
+            if is_exist_code.user != request.user:
+                raise serializers.ValidationError(
+                    {"details": "this personal code belong to another user"}
+                )
+
+        except Profile.DoesNotExist:
+            pass
+        return data
+
 
 class AddFollowRequestSerializer(serializers.ModelSerializer):
 
@@ -335,6 +438,7 @@ class AddFollowRequestSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context["request"]
+        username = self.context["username"]
         from_user = request.user
         to_user = validated_data["to_user"]
 
@@ -343,6 +447,16 @@ class AddFollowRequestSerializer(serializers.ModelSerializer):
             from_user = Profile.objects.get(user__email=from_user.email)
         except Profile.DoesNotExist:
             raise serializers.ValidationError({"details": "profile not found"})
+
+        if to_user == from_user:
+            raise serializers.ValidationError(
+                {"details": "You cannot follow yourself."}
+            )
+
+        if to_user != Profile.objects.get(user__username=username):
+            raise PermissionDenied(
+                {"details": "You can follow this user from their profile."}
+            )
 
         if not to_user.private:
             try:

@@ -31,8 +31,8 @@ def send_follow_request_email(from_user_id, to_user_id):
     from_user = User.objects.get(id=from_user_id)
     to_user = User.objects.get(id=to_user_id)
 
-    accept_token = generate_follow_request_token(to_user_id, "accept")
-    reject_token = generate_follow_request_token(to_user_id, "reject")
+    accept_token = generate_follow_request_token(from_user_id, "accept")
+    reject_token = generate_follow_request_token(from_user_id, "reject")
 
     mail = EmailMessage(
         "email/acceptorreject_follow_request.tpl",
@@ -47,3 +47,9 @@ def send_follow_request_email(from_user_id, to_user_id):
     )
     mail.send()
     return "follow request email sent"
+
+
+@shared_task
+def send_otp(id, otp):
+    user = User.objects.get(id=id)
+    return f"Sending OTP {otp} to user {user.email}"

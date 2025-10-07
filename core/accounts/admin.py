@@ -21,6 +21,7 @@ class CustomUserAdmin(UserAdmin):
         "is_superuser",
         "is_staff",
         "is_verified",
+        "secret_key",
     )
     list_filter = (
         "email",
@@ -28,7 +29,7 @@ class CustomUserAdmin(UserAdmin):
         "is_superuser",
         "is_staff",
     )
-    readonly_fields = ("username", "email")
+    # readonly_fields = ("username", "email")
     search_fields = ("email",)
     ordering = ("email",)
     fieldsets = (
@@ -77,7 +78,20 @@ class CustomUserAdmin(UserAdmin):
     )
 
 
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "first_name",
+        "last_name",
+        "phone_number",
+        "private",
+        "created_date",
+    )
+    search_fields = ("user__username", "first_name", "last_name", "phone_number")
+    list_filter = ("private", "created_date", "updated_date")
+
+
 # Register your models here.
 admin.site.register(User, CustomUserAdmin)
 admin.site.register(FollowRequest)
-admin.site.register(Profile)
+admin.site.register(Profile, ProfileAdmin)

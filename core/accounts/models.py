@@ -6,9 +6,10 @@ from django.contrib.auth.models import (
 )
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import EmailValidator, RegexValidator
-from accounts.api.v1.validators import personal_code_validator
+from accounts.api.v1.validators import personal_code_validator, phone_number_validator
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
+import pyotp
 
 
 # Create your models here.
@@ -50,6 +51,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
+    secret_key = models.CharField(
+        max_length=32, default=pyotp.random_base32, editable=False
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
@@ -67,11 +71,15 @@ class User(AbstractBaseUser, PermissionsMixin):
                 raise ValidationError("Username cannot be changed.")
         return super().save(*args, **kwargs)
 
+    def generate_otp(self):
 
-phone_number_validator = RegexValidator(
-    regex=r"^(\+98|0)?9\d{9}$",  # Example regex for phone numbers
-    message="Phone number must be entered in the format: '+989*****' or '09*******'. Up to 13 digits allowed.",
-)
+        totp = pyotp.TOTP(self.secret_key)
+        return totp.now()
+
+    def verify_otp(self, otp):
+
+        totp = pyotp.TOTP(self.secret_key)
+        return totp.verify(otp, valid_window=1)
 
 
 class Profile(models.Model):
@@ -101,7 +109,6 @@ class Profile(models.Model):
         "self", symmetrical=False, related_name="following", blank=True
     )
     private = models.BooleanField(default=True)
-    # posts = models.ForeignKey()
     slug = models.SlugField(unique=True, blank=True, null=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
@@ -126,6 +133,14 @@ class Profile(models.Model):
 
         self.follower.remove(profile)
         return f"{profile} unfollow by {self}."
+
+    def follower_count(self):
+
+        return len(self.follower.all())
+
+    def following_count(self):
+
+        return len(self.following.all())
 
     def __str__(self):
         return self.user.email

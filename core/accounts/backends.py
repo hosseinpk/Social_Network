@@ -8,10 +8,11 @@ User = get_user_model()
 class EmailOrUsernameBackend(BaseBackend):
     def authenticate(self, request, username=None, password=None, **kwargs):
         try:
-            User.objects.get(Q(email=username) | Q(username=username))
+            user = User.objects.get(Q(email=username) | Q(username=username))
+            if user.check_password(password) and self.user_can_authenticate(user):
+                return user
         except User.DoesNotExist:
             return None
-        # return super().authenticate(request, username, password, **kwargs)
 
     def user_can_authenticate(self, user):
         return user.is_active
