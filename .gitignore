@@ -83,7 +83,6 @@ target/
 # IPython
 profile_default/
 ipython_config.py
-migrations/
 rabbitmq/
 rabbit_data/
 redis/
