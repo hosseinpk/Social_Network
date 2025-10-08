@@ -76,7 +76,7 @@ This will start:
 - Redis
 - RabbitMQ
 - Nginx (static/media serving)
-- Smtp4dev (emal server)
+- Smtp4dev (email server)
 
 ---
 
