@@ -83,7 +83,7 @@ This will start:
 
 Swagger UI is automatically available at:
 ```
-http://localhost/api/schema/swagger-ui/
+http://localhost
 ```
 
 ---
