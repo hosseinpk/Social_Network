@@ -149,4 +149,4 @@ This project is licensed under the **MIT License** — feel free to use and modi
 
 ## 👨‍💻 Author
 **[HosseinPK](https://github.com/hosseinpk)**  
-Built with ❤️ using Django & Docker.
+
