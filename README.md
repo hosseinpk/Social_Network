@@ -45,7 +45,7 @@ The project is fully containerized using **Docker**, served via **Gunicorn + Ngi
 
 ---
 
-## 📦 Installation
+##  Installation
 
 ### 1️⃣ Clone the repository
 ```bash
@@ -108,7 +108,7 @@ Social_Network/
 
 ---
 
-## 🧪 Development Commands
+##  Development Commands
 Run Django management commands inside the container:
 ```bash
 docker compose exec django python manage.py makemigrations
@@ -119,7 +119,7 @@ docker compose exec django python manage.py collectstatic --noinput
 
 ---
 
-## 🧰 Tech Stack
+##  Tech Stack
 
 | Component | Technology |
 |------------|-------------|
@@ -134,7 +134,7 @@ docker compose exec django python manage.py collectstatic --noinput
 
 ---
 
-## 📸 Demo
+##  Demo
 
 Here’s a preview of the live API documentation:
 
@@ -147,6 +147,6 @@ This project is licensed under the **MIT License** — feel free to use and modi
 
 ---
 
-## 👨‍💻 Author
+##  Author
 **[HosseinPK](https://github.com/hosseinpk)**  
 
