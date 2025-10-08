@@ -38,8 +38,8 @@ The project is fully containerized using **Docker**, served via **Gunicorn + Ngi
 ### ⚙️ System Architecture
 - **Django REST Framework** for API logic  
 - **PostgreSQL** as the main database  
-- **Redis** for caching and Celery broker  
-- **RabbitMQ** for async tasks  
+- **Redis** for caching  
+- **RabbitMQ** for async tasks and Celery broker 
 - **Gunicorn + Nginx** for production serving  
 - **Docker Compose** for multi-container orchestration  
 
