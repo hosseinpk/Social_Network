@@ -15,7 +15,6 @@ The project is fully containerized using **Docker**, served via **Gunicorn + Ngi
 - Register new users and verify via email
 - Login with **OTP** and **JWT tokens**
 - Password reset via email
-- Logout with token blacklist
 - Account verification and resend verification email
 
 ### 👤 User Profiles
